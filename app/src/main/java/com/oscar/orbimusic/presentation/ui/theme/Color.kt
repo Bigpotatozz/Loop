@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 val White = Color(0xFFFFFFFF)
 val Black = Color(0xFF000000)
-val GrayOrbi = Color(0xFFD9D9D9)
+val GrayOrbi = Color(0xFFF4F0F0)
 
 // Mantengo los originales por si acaso, pero usaremos los de arriba
 val Purple80 = Color(0xFFD0BCFF)

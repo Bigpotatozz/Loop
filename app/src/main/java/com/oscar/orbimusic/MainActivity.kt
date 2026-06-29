@@ -2,18 +2,24 @@ package com.oscar.orbimusic
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,21 +42,56 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import org.w3c.dom.Text
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.rememberNavController
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                android.graphics.Color.BLACK,
+                android.graphics.Color.WHITE
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                android.graphics.Color.parseColor("#D9D9D9"), // Fondo gris abajo (tu terciario)
+                android.graphics.Color.parseColor("#D9D9D9")
+            )
+        )
         setContent {
-
             val navController = rememberNavController();
             OrbiMusicTheme {
-                Scaffold(modifier = Modifier.fillMaxSize(), bottomBar = {
+                Scaffold(modifier = Modifier.fillMaxSize(),
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    bottomBar = {
                     Navbar(navController)
                 }) { innerPadding ->
-                    AppNavigation(modifier = Modifier.padding(innerPadding), hostController = navController)
+
+                    Box(Modifier.fillMaxSize()
+                        .padding(innerPadding)
+                        .background(MaterialTheme.colorScheme.tertiary)){
+
+                        Box(Modifier.clip(RoundedCornerShape(
+                                    topStart = 0.dp,
+                                    topEnd = 0.dp,
+                                    bottomStart = 30.dp,
+                                    bottomEnd = 30.dp
+                                ))
+                                .background(MaterialTheme.colorScheme.primary)){
+                            AppNavigation(Modifier, hostController = navController)
+                        }
+
+                    }
+
                 }
             }
         }
@@ -77,7 +118,9 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController){
 
     }
 
+
 }
+
 
 
 @Composable
@@ -91,7 +134,7 @@ fun Navbar(navController: NavController){
 
 
     NavigationBar(modifier = Modifier,
-        containerColor = MaterialTheme.colorScheme.primary,
+        containerColor = MaterialTheme.colorScheme.tertiary,
         contentColor = MaterialTheme.colorScheme.contentColorFor(NavigationBarDefaults.containerColor)) {
 
 
@@ -106,7 +149,7 @@ fun Navbar(navController: NavController){
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.onPrimary,
                     selectedTextColor = MaterialTheme.colorScheme.onPrimary,
-                    indicatorColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.tertiary,
                     unselectedIconColor = MaterialTheme.colorScheme.onPrimary,
                     unselectedTextColor = MaterialTheme.colorScheme.onPrimary
                 )
@@ -114,7 +157,13 @@ fun Navbar(navController: NavController){
 
         }
 
+
     }
+
+
+
+
+
 
 
 
