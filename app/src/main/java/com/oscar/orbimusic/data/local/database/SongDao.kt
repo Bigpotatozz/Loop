@@ -20,5 +20,9 @@ interface SongDao {
     suspend fun postSong(song: SongEntity)
 
 
+    @Query("SELECT * FROM songs WHERE title = :title AND artist = :artist")
+    suspend fun searchByTitleAndArtist(title: String, artist: String): SongEntity?
+
+
 
 }

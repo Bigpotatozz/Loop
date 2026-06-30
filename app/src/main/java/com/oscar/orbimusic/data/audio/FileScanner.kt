@@ -6,6 +6,7 @@ import android.os.Environment
 import android.util.Log
 import com.oscar.orbimusic.data.local.database.SongDao
 import com.oscar.orbimusic.data.local.database.SongEntity
+import kotlinx.coroutines.flow.Flow
 import java.io.File
 import java.io.FileOutputStream
 
@@ -16,10 +17,8 @@ class FileScanner(
 
 
     suspend fun scanMusicFolder() {
-        Log.d("FileScanner", "Iniciando escaneo de música...")
 
         val musicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
-        Log.d("FileScanner", "Buscando en: ${musicDir.absolutePath}")
 
         if (!musicDir.exists()) {
             Log.e("FileScanner", "La carpeta de música no existe")
@@ -27,21 +26,31 @@ class FileScanner(
         }
 
         scanDirectoryRecursive(musicDir)
-        Log.d("FileScanner", "Escaneo finalizado")
     }
+
 
     private suspend fun scanDirectoryRecursive(directory: File) {
         val files = directory.listFiles() ?: return
-
         files.forEach { file ->
+
             if (file.isDirectory) {
                 scanDirectoryRecursive(file)
             } else if (file.extension.lowercase() == "mp3") {
                 val song = extractMetaData(file)
                 if (song != null) {
                     if(song.title != "Desconocido"){
-                        songDao.postSong(song)
-                        Log.d("FileScanner", "Canción insertada: ${song.title} desde ${file.name}")
+
+
+                        val repeated = songDao.searchByTitleAndArtist(song.title, song.artist);
+
+                        if(repeated != null){
+                            return
+                        }else{
+                            songDao.postSong(song)
+                            Log.d("FileScanner", "Canción insertada: ${song.title} desde ${file.name}")
+                        }
+
+
                     }
                 }
             }
