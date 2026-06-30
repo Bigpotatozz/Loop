@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContract
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,18 +57,40 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import com.oscar.orbimusic.di.AppModule
+import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+
+    private val requestPermissions = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val audioGranted = permissions[android.Manifest.permission.READ_MEDIA_AUDIO] ?: false
+        val storageGranted = permissions[android.Manifest.permission.READ_EXTERNAL_STORAGE] ?: false
+
+        if (audioGranted || storageGranted) {
+            // Permiso otorgado, escanear archivos
+            scanMusicFiles()
+        } else {
+            android.util.Log.e("MainActivity", "Permisos denegados por el usuario")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        AppModule.initialize(this);
+        AppModule.initialize(this)
+        val mediaViewModel: MediaViewModel = AppModule.provideMediaViewModel()
 
-
-        lifecycleScope.launch {
-            AppModule.scanMusicFiles(this@MainActivity);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions.launch(arrayOf(android.Manifest.permission.READ_MEDIA_AUDIO))
+        } else {
+            requestPermissions.launch(arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE))
         }
+
+
+
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.light(
                 android.graphics.Color.BLACK,
@@ -97,7 +121,9 @@ class MainActivity : ComponentActivity() {
                                     bottomEnd = 30.dp
                                 ))
                                 .background(MaterialTheme.colorScheme.primary)){
-                            AppNavigation(Modifier, hostController = navController)
+                            AppNavigation(Modifier,
+                                hostController = navController,
+                                mediaViewModel)
                         }
 
                     }
@@ -106,10 +132,16 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun scanMusicFiles(){
+        lifecycleScope.launch {
+            AppModule.scanMusicFiles(this@MainActivity);
+        }
+    }
 }
 
 @Composable
-fun AppNavigation(modifier: Modifier, hostController: NavHostController){
+fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaViewModel: MediaViewModel){
 
     NavHost(hostController, "home", modifier){
 
@@ -118,7 +150,7 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController){
         }
 
         composable("media"){
-            MediaScreen()
+            MediaScreen(mediaViewModel)
         }
 
         composable("search"){
