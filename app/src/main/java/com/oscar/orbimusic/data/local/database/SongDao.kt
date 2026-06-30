@@ -1,7 +1,10 @@
 package com.oscar.orbimusic.data.local.database
 
 import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.oscar.orbimusic.domain.model.Song
 import kotlinx.coroutines.flow.Flow
 
 
@@ -10,8 +13,12 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface SongDao {
 
-    @Query("SELECT * FROM songs ORDER BY datedAdded DESC")
+    @Query("SELECT * FROM songs ORDER BY dateAdded DESC")
     fun getAllSongs(): Flow<List<SongEntity>> //El flow es como un socket, esta emitiendo eventos en caso de cambios
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun postSong(song: SongEntity)
+
 
 
 }
