@@ -7,6 +7,7 @@ import android.util.Log
 import com.oscar.orbimusic.data.local.database.SongDao
 import com.oscar.orbimusic.data.local.database.SongEntity
 import java.io.File
+import java.io.FileOutputStream
 
 class FileScanner(
     private val context: Context,
@@ -69,6 +70,15 @@ class FileScanner(
                 ?.toLongOrNull() ?: 0L
 
             //Cierra el archivo
+            var albumArthPath: String? = null;
+
+            val picture = retriever.embeddedPicture;
+
+            if(picture != null){
+                albumArthPath = savePictureToFile(picture,  file.nameWithoutExtension)
+
+            }
+
             retriever.release();
 
             //crea la entidad con los datos extraidos
@@ -77,12 +87,37 @@ class FileScanner(
                 artist = artist,
                 album = album,
                 duration = duration,
+                albumArtPath = albumArthPath,
                 path = file.path);
 
 
         }catch (e: Exception){
             null
         }
+
+    }
+
+
+    fun savePictureToFile(picture: ByteArray, songName: String): String?{
+        return try{
+
+            val albumArtDir = File(context.cacheDir, "album_art");
+            if (!albumArtDir.exists()) {
+                albumArtDir.mkdirs()
+            }
+
+            val pictureFile = File(albumArtDir, "$songName.jpg");
+
+            FileOutputStream(pictureFile).use { output ->
+                output.write(picture)
+            }
+
+            pictureFile.path
+
+        }catch (e: Exception) {
+            null
+        }
+
 
     }
 
