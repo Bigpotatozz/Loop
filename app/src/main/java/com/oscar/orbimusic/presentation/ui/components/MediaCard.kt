@@ -31,13 +31,13 @@ import com.oscar.orbimusic.domain.model.Song
 
 @Composable
 
-fun MediaSongCard(title: String, artist: String, albumArt: String?, duration: Long){
+fun MediaSongCard(modifier: Modifier, title: String, artist: String, albumArt: String?, duration: Long){
 
     val durationInSeconds = duration / 1000
     val minutes = durationInSeconds / 60
     val seconds = durationInSeconds % 60
 
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Row( Modifier.weight(0.8f) ,
             verticalAlignment = Alignment.CenterVertically) {
 
@@ -69,6 +69,7 @@ fun MediaSongCard(title: String, artist: String, albumArt: String?, duration: Lo
 fun MediaSongCardPreview(){
     Column(Modifier.fillMaxWidth().padding(top = 100.dp)) {
         MediaSongCard(
+            Modifier,
             title = "Smells Like Teen Spirit",
             artist = "Nirvana",
             albumArt = null,

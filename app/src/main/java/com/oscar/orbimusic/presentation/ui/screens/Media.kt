@@ -1,9 +1,11 @@
 package com.oscar.orbimusic.presentation.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -20,10 +22,20 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
 
-        songs.forEach {
-            MediaSongCard(it.title, it.artist, it.albumArtPath, it.duration)
+        songs.forEachIndexed { index, song ->
+            MediaSongCard(
+                modifier = Modifier.clickable(onClick = { mediaViewModel.playSong(song, index) }),
+                title = song.title,
+                artist = song.artist,
+                albumArt = song.albumArtPath,
+                duration = song.duration
+            )
+
             Spacer(Modifier.padding(5.dp))
+
         }
+
+
 
 
     }

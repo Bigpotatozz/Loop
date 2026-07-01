@@ -14,7 +14,7 @@ object AppModule {
     private lateinit var context: Context;
 
     fun initialize(appContext: Context){
-        context = appContext;
+        context = appContext.applicationContext;
     }
     private val songDatabaseInit: SongDatabase by lazy {
         SongDatabase.getInstance(context);
