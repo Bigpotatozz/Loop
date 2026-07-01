@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,9 +22,10 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
     val songs by mediaViewModel.allSongs.collectAsState();
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
 
-        songs.forEachIndexed { index, song ->
+
+    LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
+        itemsIndexed(songs) {index, song ->
             MediaSongCard(
                 modifier = Modifier.clickable(onClick = { mediaViewModel.playSong(song, index) }),
                 title = song.title,
@@ -33,10 +36,7 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
             Spacer(Modifier.padding(5.dp))
 
+
         }
-
-
-
-
     }
 }

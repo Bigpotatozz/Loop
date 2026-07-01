@@ -35,7 +35,7 @@ class FileScanner(
 
             if (file.isDirectory) {
                 scanDirectoryRecursive(file)
-            } else if (file.extension.lowercase() == "mp3") {
+            } else if (file.extension.lowercase() in listOf("mp3", "m4a", "wav", "flac")) {
                 val song = extractMetaData(file)
                 if (song != null) {
                     if(song.title != "Desconocido"){

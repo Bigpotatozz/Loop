@@ -21,6 +21,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,21 +49,30 @@ fun MediaSongCard(modifier: Modifier, title: String, artist: String, albumArt: S
             Spacer(Modifier.padding(5.dp))
             Column(Modifier.fillMaxWidth(),verticalArrangement = Arrangement.Center) {
                 Text(title,
-                    style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold))
+                    style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Text(artist,
-                    style = TextStyle(fontSize = 15.sp), color = MaterialTheme.colorScheme.tertiary)
+                    style = TextStyle(fontSize = 15.sp), color = MaterialTheme.colorScheme.tertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
         }
 
         Column() {
-            Text("${minutes}:${seconds}", style = TextStyle(fontSize = 15.sp))
+            Text(
+                text = String.format("%d:%02d", minutes, seconds),
+                style = TextStyle(fontSize = 15.sp)
+            )
         }
 
     }
 
 
-};
+}
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
