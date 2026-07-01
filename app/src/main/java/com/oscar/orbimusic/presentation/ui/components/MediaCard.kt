@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
@@ -42,12 +43,14 @@ fun MediaSongCard(title: String, artist: String, albumArt: String?, duration: Lo
 
             AsyncImage(model = albumArt,
                 contentDescription = title,
-                Modifier.size(35.dp).clip(RoundedCornerShape(6.dp)))
+                Modifier.size(50.dp).clip(RoundedCornerShape(10.dp)))
 
             Spacer(Modifier.padding(5.dp))
             Column(Modifier.fillMaxWidth(),verticalArrangement = Arrangement.Center) {
-                Text(title, style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold))
-                Text(artist,  style = TextStyle(fontSize = 8.sp))
+                Text(title,
+                    style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold))
+                Text(artist,
+                    style = TextStyle(fontSize = 15.sp), color = MaterialTheme.colorScheme.tertiary)
             }
 
         }
@@ -61,33 +64,15 @@ fun MediaSongCard(title: String, artist: String, albumArt: String?, duration: Lo
 
 };
 
-@Preview
+@Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun MediaSongCardPreview(){
-
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Row( Modifier.weight(0.8f) ,
-            verticalAlignment = Alignment.CenterVertically) {
-
-            Image(painter = painterResource(id = R.drawable.ic_launcher_background),
-                contentDescription = "imagen",
-                Modifier.size(35.dp).clip(RoundedCornerShape(6.dp)))
-
-            Spacer(Modifier.padding(5.dp))
-            Column(Modifier.fillMaxWidth(),verticalArrangement = Arrangement.Center) {
-                Text("Smells Like Teen Spirit", style = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold))
-                Text("Nirvana",  style = TextStyle(fontSize = 8.sp))
-            }
-
-        }
-
-        Column() {
-            Text("3:00", style = TextStyle(fontSize = 15.sp))
-        }
-
-
-
-
+    Column(Modifier.fillMaxWidth().padding(top = 100.dp)) {
+        MediaSongCard(
+            title = "Smells Like Teen Spirit",
+            artist = "Nirvana",
+            albumArt = null,
+            duration = 180000L
+        )
     }
-
-};
+}

@@ -33,7 +33,7 @@ object AppModule {
     }
 
     fun provideMediaViewModel(): MediaViewModel {
-        return MediaViewModel(songRepository);
+        return MediaViewModel(songRepository, context);
     }
 
 

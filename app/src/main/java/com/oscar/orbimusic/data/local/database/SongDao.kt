@@ -23,6 +23,9 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE title = :title AND artist = :artist")
     suspend fun searchByTitleAndArtist(title: String, artist: String): SongEntity?
 
+    @Query("SELECT * FROM songs WHERE path = :path")
+    suspend fun searchByPath(path: String): SongEntity?
+
 
 
 }

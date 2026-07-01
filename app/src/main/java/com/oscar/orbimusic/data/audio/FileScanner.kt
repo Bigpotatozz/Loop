@@ -39,12 +39,10 @@ class FileScanner(
                 val song = extractMetaData(file)
                 if (song != null) {
                     if(song.title != "Desconocido"){
-
-
-                        val repeated = songDao.searchByTitleAndArtist(song.title, song.artist);
+                        val repeated = songDao.searchByPath(song.path);
 
                         if(repeated != null){
-                            return
+                            Log.d("FileScanner", "Cancion repetida, omitiendo");
                         }else{
                             songDao.postSong(song)
                             Log.d("FileScanner", "Canción insertada: ${song.title} desde ${file.name}")
