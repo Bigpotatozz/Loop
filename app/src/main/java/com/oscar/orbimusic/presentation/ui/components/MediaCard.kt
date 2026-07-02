@@ -44,17 +44,18 @@ fun MediaSongCard(modifier: Modifier, title: String, artist: String, albumArt: S
 
             AsyncImage(model = albumArt,
                 contentDescription = title,
-                Modifier.size(50.dp).clip(RoundedCornerShape(10.dp)))
+                Modifier.size(56.dp).clip(RoundedCornerShape(10.dp)))
 
             Spacer(Modifier.padding(5.dp))
             Column(Modifier.fillMaxWidth(),verticalArrangement = Arrangement.Center) {
                 Text(title,
-                    style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(artist,
-                    style = TextStyle(fontSize = 15.sp), color = MaterialTheme.colorScheme.tertiary,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
+                    color = MaterialTheme.colorScheme.secondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -65,7 +66,7 @@ fun MediaSongCard(modifier: Modifier, title: String, artist: String, albumArt: S
         Column() {
             Text(
                 text = String.format("%d:%02d", minutes, seconds),
-                style = TextStyle(fontSize = 15.sp)
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp)
             )
         }
 

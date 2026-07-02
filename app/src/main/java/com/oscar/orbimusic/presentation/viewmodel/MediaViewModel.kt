@@ -10,11 +10,13 @@ import com.oscar.orbimusic.data.audio.AudioServiceConnection
 import com.oscar.orbimusic.domain.model.PlayerState
 import com.oscar.orbimusic.domain.model.Song
 import com.oscar.orbimusic.domain.repository.SongRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 class MediaViewModel (private val songRepository: SongRepository,
                       private val context: Context): ViewModel() {
@@ -26,12 +28,38 @@ class MediaViewModel (private val songRepository: SongRepository,
     val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
     private val _allSongs = MutableStateFlow<List<Song>>(emptyList());
     val allSongs: StateFlow<List<Song>> = _allSongs.asStateFlow();
+    private val _currentPosition = MutableStateFlow(0L);
+    val currentPosition: StateFlow<Long> = _currentPosition.asStateFlow();
+    private val _duration = MutableStateFlow(0L);
+    val duration: StateFlow<Long> = _duration.asStateFlow();
+
+
 
     init {
         loadAllSongs()
         Log.d("OSCAR","${allSongs}");
         connectToAudioService()
+        startUpdatingProgress()
     }
+
+    private fun startUpdatingProgress() {
+        viewModelScope.launch {
+            while(true){
+                audioService?.let { service ->
+                    _currentPosition.value = service.getCurrentPosition();
+                    _duration.value = service.getDuration();
+                }
+                delay(500.milliseconds);
+            }
+        }
+    }
+
+
+
+
+
+
+
 
 
     private fun connectToAudioService() {
