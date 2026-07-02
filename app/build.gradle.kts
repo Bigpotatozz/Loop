@@ -66,4 +66,7 @@ dependencies {
     //Reproduccion de audio
     implementation("androidx.media3:media3-exoplayer:1.1.1")
     implementation("androidx.media3:media3-session:1.1.1")
+
+    //Media session
+    implementation("androidx.media:media:1.6.0")
 }

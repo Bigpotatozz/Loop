@@ -1,13 +1,32 @@
 package com.oscar.orbimusic.data.audio
 
+import android.annotation.SuppressLint
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.media.session.PlaybackState.ACTION_PAUSE
+import android.media.session.PlaybackState.ACTION_PLAY
 import android.os.Binder
+import android.os.Build
 import android.os.IBinder
 import android.util.Log
+import androidx.annotation.OptIn
+import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaSession
+import androidx.media3.session.MediaStyleNotificationHelper
+import com.oscar.orbimusic.MainActivity
+import com.oscar.orbimusic.R
+import com.oscar.orbimusic.data.audio.AudioPlayerService.Companion.ACTION_NEXT
+import com.oscar.orbimusic.data.audio.AudioPlayerService.Companion.ACTION_PREVIOUS
 import com.oscar.orbimusic.domain.model.Song
 
 class AudioPlayerService: Service() {
@@ -17,12 +36,138 @@ class AudioPlayerService: Service() {
     private var currentSongs = listOf<Song>(); //Lista de canciones actuales
     private var currentIndex = 0; //Posicion de la cancion en reproduccion
 
+    private lateinit var mediaSession: MediaSession; //Le indica a android que se esta reproduciendo audio
+    private var onPlayerStateChangedListener: ((Boolean, Int) -> Unit)? = null
+
+    fun setPlayerStateListener(listener: (Boolean, Int) -> Unit) {
+        onPlayerStateChangedListener = listener
+    }
+
+
+    companion object {
+        private const val CHANNEL_ID = "music_player_channel"; //Identificador del canal
+        private const val NOTIFICATION_ID = 1; //Id de identificador
+
+        const val ACTION_PLAY = "ACTION_PLAY"
+        const val ACTION_PAUSE = "ACTION_PAUSE"
+        const val ACTION_NEXT = "ACTION_NEXT"
+        const val ACTION_PREVIOUS = "ACTION_PREVIOUS"
+    }
+
+
     // __init__
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate() {
         super.onCreate()
         initializePlayer();
+        createNotificationChannel();
+        initializeMediaSession();
+
+
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun createNotificationChannel(){
+        //crea el canal de la notificacion
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Music Player",
+            NotificationManager.IMPORTANCE_LOW
+        )
+        //Obtiene el servicio de notificaciones del sistema
+        val manager = getSystemService(NotificationManager::class.java);
+        //Agarra el servicio de notificaciones y le indica que cree un nuevo canal (el que previamente creamos)
+        manager.createNotificationChannel(channel);
+    }
+
+    //Incializa el media session
+    private fun initializeMediaSession(){
+        mediaSession = MediaSession.Builder(this, player).build();
+    }
+
+    
+    
+    //Actualiza los datos de la notificacion (caratula, nombre, etc)
+    @OptIn(UnstableApi::class)
+    @SuppressLint("ForegroundServiceType")
+    private fun updateNotification(isPlaying: Boolean){
+        //Valida que no se este en la ultima cancion para no actualizar la notificacion
+        if (currentIndex >= currentSongs.size) return
+        //Obtiene la cancion por el indice en el que esta
+        val song = currentSongs[currentIndex]
+
+        //Es un intento que abre el MainActivity
+        val openAppIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            //Abre MainActivity en una nueva tarea    Le indica que si ya hay una la reutilice
+        }
+
+        //Un pending intent sirve para guardar como el estado de la actividad para cuando el usuario la presione, mantiene los datos durante horas o dias
+        // Se ejecuta el intento (notificacion) se mantiene aqui para que cuando el usuario de click se ejecute la accion (openAppIntent)
+        val openAppPendingIntent = PendingIntent.getActivity(
+            this, 0, openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE //Similar a openAppIntent
+        )
+
+        //Configuracion de la notificacion
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle(song.title)
+            .setContentText(song.artist)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentIntent(openAppPendingIntent)
+            // Botón anterior
+            .addAction(
+                0, "Anterior",
+                createPendingIntent(ACTION_PREVIOUS)
+            )
+
+            // Botón play/pausa
+            .addAction(
+                0,
+                if (isPlaying) "Pausa" else "Play",
+                createPendingIntent(if (isPlaying) ACTION_PAUSE else ACTION_PLAY)
+            )
+            // Botón siguiente
+            .addAction(
+                0, "Siguiente",
+                createPendingIntent(ACTION_NEXT)
+            )
+            .setStyle(MediaStyleNotificationHelper.MediaStyle(mediaSession)
+                .setShowActionsInCompactView(0, 1, 2)  // Mostrar 3 acciones
+            )
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(isPlaying)  // Si está sonando, no se puede deslizar
+            .build()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
+    }
+
+    private fun createPendingIntent(action: String): PendingIntent {
+        val intent = Intent(this, AudioPlayerService::class.java).apply {
+            this.action = action
+        }
+        return PendingIntent.getService(
+            this, action.hashCode(), intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Detecta qué botón se presionó
+        when (intent?.action) {
+            ACTION_PLAY -> play()
+            ACTION_PAUSE -> pause()
+            ACTION_NEXT  -> playNext()
+            ACTION_PREVIOUS -> playPrevious()
+        }
+        return START_STICKY
+    }
 
     //Inicializa el reproductor
     private fun initializePlayer(){
@@ -30,6 +175,20 @@ class AudioPlayerService: Service() {
         player = ExoPlayer.Builder(this).build();
         //Agrega un listener a dicho servicio
         player.addListener(object: Player.Listener{
+
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                // Sincroniza el índice interno con el del reproductor
+                currentIndex = player.currentMediaItemIndex
+                updateNotification(player.isPlaying)
+                onPlayerStateChangedListener?.invoke(player.isPlaying, currentIndex)
+            }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                // Actualiza la notificación cuando se pausa o reanuda
+                updateNotification(isPlaying)
+                onPlayerStateChangedListener?.invoke(isPlaying, currentIndex)
+            }
+
             //Metodo que se ejecuta cada vez que el estado cambia (START, PAUSE, NEXT, ETC)
             override fun onPlaybackStateChanged(state: Int){
                 when (state) {

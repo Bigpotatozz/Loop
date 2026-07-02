@@ -55,7 +55,7 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                 if(playerState.isPlaying){
                     mediaViewModel.togglePlayPause()
                 }else{
-                    mediaViewModel.playSong(songs[0], 0);
+                    mediaViewModel.playSong(playerState.currentSong, playerState.currentIndex);
                 }
                 }) {
                 Text(if (playerState.isPlaying) "PAUSE" else "PLAY")

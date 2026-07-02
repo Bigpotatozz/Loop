@@ -38,6 +38,17 @@ class MediaViewModel (private val songRepository: SongRepository,
         serviceConnection = AudioServiceConnection(
             callback = { service ->
                 audioService = service
+                service.setPlayerStateListener { isPlaying, index ->
+                    _playerState.update { currentState ->
+                        currentState.copy(
+                            isPlaying = isPlaying,
+                            currentIndex = index,
+                            currentSong = if (currentState.queue.isNotEmpty() && index < currentState.queue.size) {
+                                currentState.queue[index]
+                            } else currentState.currentSong
+                        )
+                    }
+                }
             }
         )
         val intent = Intent(context, AudioPlayerService::class.java)
@@ -57,7 +68,7 @@ class MediaViewModel (private val songRepository: SongRepository,
 
 
 
-    fun playSong(song: Song, index: Int = 0) {
+    fun playSong(song: Song?, index: Int = 0) {
         _playerState.update { currentState ->
             currentState.copy(
                 currentSong = song,
