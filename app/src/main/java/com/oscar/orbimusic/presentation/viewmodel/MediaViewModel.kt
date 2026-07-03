@@ -82,13 +82,38 @@ class MediaViewModel (private val songRepository: SongRepository,
         val intent = Intent(context, AudioPlayerService::class.java)
         context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
-    private fun loadAllSongs(){
+    public fun loadAllSongs(){
         viewModelScope.launch {
             try{
                 songRepository.getAllSongs().collect { songs ->
                     _allSongs.value = songs;
                 }
             }finally {
+                null
+            }
+        }
+    }
+
+    public fun loadAllSongsByArtist(){
+        viewModelScope.launch {
+            try {
+                songRepository.getOrderedByArtist().collect { songs ->
+                    _allSongs.value = songs
+                }
+            }finally {
+                null
+            }
+        }
+    }
+
+    public fun loadAllSongsByTitle(){
+        viewModelScope.launch {
+            try{
+                songRepository.getOrderedByName().collect { songs ->
+                    _allSongs.value = songs
+                }
+
+            }finally{
                 null
             }
         }

@@ -19,6 +19,18 @@ class SongRepositoryImpl(private val songDao: SongDao): SongRepository{
 
     }
 
+    override fun getOrderedByName(): Flow<List<Song>> {
+        return songDao.getOrderedByName().map { entities ->
+            entities.map { it.toDomainModel() }
+        }
+    }
+
+    override fun getOrderedByArtist(): Flow<List<Song>> {
+        return songDao.getOrderedByArtist().map { entities ->
+            entities.map { it.toDomainModel() }
+        }
+    }
+
 
 }
 

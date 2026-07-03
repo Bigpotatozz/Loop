@@ -26,6 +26,12 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE path = :path")
     suspend fun searchByPath(path: String): SongEntity?
 
+    @Query("SELECT * FROM songs ORDER BY artist")
+    fun getOrderedByArtist(): Flow<List<SongEntity>>;
+
+    @Query("SELECT * FROM songs ORDER BY title")
+    fun getOrderedByName(): Flow<List<SongEntity>>;
+
 
 
 }

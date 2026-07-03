@@ -6,4 +6,7 @@ import kotlinx.coroutines.flow.Flow
 interface SongRepository {
     fun getAllSongs(): Flow<List<Song>>;
 
+    fun getOrderedByArtist(): Flow<List<Song>>;
+    fun getOrderedByName(): Flow<List<Song>>;
+
 }

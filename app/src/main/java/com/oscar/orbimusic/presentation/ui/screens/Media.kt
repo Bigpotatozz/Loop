@@ -73,6 +73,26 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
 
     Column() {
+
+
+        Row() {
+            Button(onClick = {
+
+                mediaViewModel.loadAllSongsByTitle();
+
+            }) {
+                Text("Nombre")
+            }
+
+            Button(onClick = { mediaViewModel.loadAllSongsByArtist();}) {
+                Text("Artista")
+            }
+
+            Button(onClick = { mediaViewModel.loadAllSongs();}) {
+                Text("Ultimas agregadas")
+            }
+        }
+
         LazyColumn(Modifier
             .padding(start = 16.dp, end = 16.dp, top = 5.dp)
             .weight(0.8f)) {
