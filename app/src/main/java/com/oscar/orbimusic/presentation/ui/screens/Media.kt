@@ -1,5 +1,6 @@
 package com.oscar.orbimusic.presentation.ui.screens
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -27,6 +28,8 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +39,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,25 +78,53 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
     val minutes = durationInSeconds / 60
     val seconds = durationInSeconds % 60
 
+    val stateList = remember { mutableStateListOf(false, false, true) }
 
     Column() {
 
+        Column(Modifier.padding(15.dp),) {
 
-        Row() {
-            Button(onClick = {
+            Text("Ordenar por: ")
 
-                mediaViewModel.loadAllSongsByTitle();
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                Button(onClick = {
 
-            }) {
-                Text("Nombre")
-            }
+                    stateList.replaceAll{false}
+                    stateList[0] = !stateList[0];
+                    Log.i("OSCAR", "${stateList}")
+                    mediaViewModel.loadAllSongsByTitle();
+                }, colors = ButtonDefaults.buttonColors(
+                    containerColor = if(stateList[0]) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                    contentColor = if(stateList[0]) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                )) {
+                    Text("Nombre")
+                }
 
-            Button(onClick = { mediaViewModel.loadAllSongsByArtist();}) {
-                Text("Artista")
-            }
+                Button(onClick = {
+                    stateList.replaceAll{false}
+                    stateList[1] = !stateList[1];
+                    Log.i("OSCAR", "${stateList}")
+                    mediaViewModel.loadAllSongsByArtist();
 
-            Button(onClick = { mediaViewModel.loadAllSongs();}) {
-                Text("Ultimas agregadas")
+                },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if(stateList[1]) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                        contentColor = if(stateList[1]) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                    )) {
+                    Text("Artista")
+                }
+
+                Button(onClick = {
+                    stateList.replaceAll{false}
+                    stateList[2] = !stateList[2];
+                    Log.i("OSCAR", "${stateList}")
+                    mediaViewModel.loadAllSongs();},
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if(stateList[2]) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                        contentColor = if(stateList[2]) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                    )) {
+                    Text("Recientes")
+                }
             }
         }
 

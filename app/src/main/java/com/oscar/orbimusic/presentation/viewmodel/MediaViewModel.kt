@@ -33,6 +33,8 @@ class MediaViewModel (private val songRepository: SongRepository,
     private val _duration = MutableStateFlow(0L);
     val duration: StateFlow<Long> = _duration.asStateFlow();
 
+    private val _filters =
+
 
 
     init {
@@ -53,14 +55,6 @@ class MediaViewModel (private val songRepository: SongRepository,
             }
         }
     }
-
-
-
-
-
-
-
-
 
     private fun connectToAudioService() {
         serviceConnection = AudioServiceConnection(
