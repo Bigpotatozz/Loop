@@ -74,7 +74,7 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
     Column() {
         LazyColumn(Modifier
-            .padding(16.dp)
+            .padding(start = 16.dp, end = 16.dp, top = 5.dp)
             .weight(0.8f)) {
         itemsIndexed(songs) {index, song ->
             MediaSongCard(
