@@ -1,11 +1,13 @@
 package com.oscar.orbimusic.presentation.ui.screens
 
 import android.util.Log
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +45,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,104 +83,132 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
     val stateList = remember { mutableStateListOf(false, false, true) }
 
-    Column() {
 
-        Column(Modifier.padding(15.dp),) {
+    var isExpanded by rememberSaveable{ mutableStateOf(false) };
 
-            Text("Ordenar por: ")
 
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                Button(onClick = {
 
-                    stateList.replaceAll{false}
-                    stateList[0] = !stateList[0];
-                    Log.i("OSCAR", "${stateList}")
-                    mediaViewModel.loadAllSongsByTitle();
-                }, colors = ButtonDefaults.buttonColors(
-                    containerColor = if(stateList[0]) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
-                    contentColor = if(stateList[0]) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                )) {
-                    Text("Nombre")
-                }
 
-                Button(onClick = {
-                    stateList.replaceAll{false}
-                    stateList[1] = !stateList[1];
-                    Log.i("OSCAR", "${stateList}")
-                    mediaViewModel.loadAllSongsByArtist();
 
-                },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if(stateList[1]) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
-                        contentColor = if(stateList[1]) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                    )) {
-                    Text("Artista")
-                }
-
-                Button(onClick = {
-                    stateList.replaceAll{false}
-                    stateList[2] = !stateList[2];
-                    Log.i("OSCAR", "${stateList}")
-                    mediaViewModel.loadAllSongs();},
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if(stateList[2]) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
-                        contentColor = if(stateList[2]) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                    )) {
-                    Text("Recientes")
-                }
-            }
+    AnimatedContent(
+        targetState = isExpanded,
+        label = "song_expanded",
+        transitionSpec = {
+            slideInVertically(initialOffsetY = { it }) + fadeIn() togetherWith
+            slideOutVertically(targetOffsetY = { it }) + fadeOut()
         }
+    ) { expanded ->
 
-        LazyColumn(Modifier
-            .padding(start = 16.dp, end = 16.dp, top = 5.dp)
-            .weight(0.8f)) {
-        itemsIndexed(songs) {index, song ->
-            MediaSongCard(
-                modifier = Modifier.clickable(onClick = { mediaViewModel.playSong(song, index) }),
-                title = song.title,
-                artist = song.artist,
-                albumArt = song.albumArtPath,
-                duration = song.duration,
-                isPlaying = if(playerState.currentSong?.title == song.title && playerState.isPlaying) true else false
-            )
+        if(!expanded){
 
-            Spacer(Modifier.padding(7.dp))
-        }
-    }
+            Column(Modifier.fillMaxSize()) {
 
+                Column(Modifier.padding(15.dp),) {
 
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        Button(onClick = {
 
+                            stateList.replaceAll{false}
+                            stateList[0] = !stateList[0];
+                            Log.i("OSCAR", "${stateList}")
+                            mediaViewModel.loadAllSongsByTitle();
+                        }, colors = ButtonDefaults.buttonColors(
+                            containerColor = if(stateList[0]) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                            contentColor = if(stateList[0]) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                        )) {
+                            Text("Nombre")
+                        }
 
+                        Button(onClick = {
+                            stateList.replaceAll{false}
+                            stateList[1] = !stateList[1];
+                            Log.i("OSCAR", "${stateList}")
+                            mediaViewModel.loadAllSongsByArtist();
 
+                        },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if(stateList[1]) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                                contentColor = if(stateList[1]) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                            )) {
+                            Text("Artista")
+                        }
 
+                        Button(onClick = {
+                            stateList.replaceAll{false}
+                            stateList[2] = !stateList[2];
+                            Log.i("OSCAR", "${stateList}")
+                            mediaViewModel.loadAllSongs();},
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if(stateList[2]) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                                contentColor = if(stateList[2]) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                            )) {
+                            Text("Recientes")
+                        }
+                    }
+                }
 
-            AnimatedVisibility(
-                visible = playerState.currentSong != null,
-                // Efecto de entrada: Aparece desde abajo (300ms) con fundido
-                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                // Efecto de salida: Se desliza hacia abajo con fundido
-                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-            ) {
-                Box(Modifier
-                    .padding(5.dp)
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = 20.dp,
-                            topEnd = 20.dp,
-                            bottomStart = 20.dp,
-                            bottomEnd = 20.dp
+                LazyColumn(Modifier
+                    .padding(start = 16.dp, end = 16.dp, top = 5.dp)
+                    .weight(0.8f)) {
+                    itemsIndexed(songs) {index, song ->
+                        MediaSongCard(
+                            modifier = Modifier.clickable(onClick = { mediaViewModel.playSong(song, index) }),
+                            title = song.title,
+                            artist = song.artist,
+                            albumArt = song.albumArtPath,
+                            duration = song.duration,
+                            isPlaying = if(playerState.currentSong?.title == song.title && playerState.isPlaying) true else false
                         )
-                    )){
-                    PrevMediaSong(playerState, mediaViewModel)
+
+                        Spacer(Modifier.padding(7.dp))
+                    }
+                }
+
+
+
+
+
+
+
+                AnimatedVisibility(
+                    visible = playerState.currentSong != null,
+                    // Efecto de entrada: Aparece desde abajo (300ms) con fundido
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    // Efecto de salida: Se desliza hacia abajo con fundido
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                ) {
+                    Box(Modifier
+                        .padding(5.dp)
+                        .clip(
+                            RoundedCornerShape(
+                                topStart = 20.dp,
+                                topEnd = 20.dp,
+                                bottomStart = 20.dp,
+                                bottomEnd = 20.dp
+                            )
+                        ).clickable(onClick = {
+                            isExpanded = true
+                        })){
+                        PrevMediaSong(playerState, mediaViewModel)
+                    }
+
+                }
             }
 
+
+        }else{
+
+
+            Column() {
+                ExpandedPlayerScreen(Modifier,
+                    "Perfecta live music",
+                    "Eksa y Elmar",
+                    duration = 40001,
+                    isPlaying = false
+                );
             }
 
-
-
-
-
-
+        }
 
     }
 

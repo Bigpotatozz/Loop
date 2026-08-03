@@ -32,6 +32,9 @@ interface SongDao {
     @Query("SELECT * FROM songs ORDER BY title")
     fun getOrderedByName(): Flow<List<SongEntity>>;
 
+    @Query("SELECT * FROM songs ORDER BY RANDOM() LIMIT 1")
+    suspend fun getRandomSong(): SongEntity?
+
 
 
 }
