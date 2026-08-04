@@ -32,6 +32,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -129,8 +130,11 @@ fun PastPrevMediaSong(playerState: PlayerState,
 
 
     val shuffle by mediaViewModel.shuffle.collectAsState();
+    val repeat by mediaViewModel.repeat.collectAsState();
 
     var shuffleLocal = false;
+    var repeatLocal = false;
+
 
     Column () {
 
@@ -190,6 +194,7 @@ fun PastPrevMediaSong(playerState: PlayerState,
             Icon( imageVector = Icons.Filled.Shuffle,
                 contentDescription = "shuffle",
                 modifier = Modifier.size(25.dp).clickable(onClick = {
+
                     shuffleLocal = !shuffle;
                     mediaViewModel.setShuffle(shuffleLocal)
                 }),
@@ -237,11 +242,13 @@ fun PastPrevMediaSong(playerState: PlayerState,
             Spacer(Modifier.padding(5.dp))
 
             Icon( imageVector = Icons.Filled.Repeat,
-                contentDescription = "next",
+                contentDescription = "repeat",
                 modifier = Modifier.size(25.dp).clickable(onClick = {
-                    mediaViewModel.playNext()
+
+                    repeatLocal = !repeat;
+                    mediaViewModel.setRepeat(repeatLocal);
                 }),
-                tint = Color.Gray)
+                tint = if(!repeat) Color.Gray else MaterialTheme.colorScheme.primary)
 
 
 

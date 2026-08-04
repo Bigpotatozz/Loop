@@ -1,5 +1,6 @@
 package com.oscar.orbimusic.presentation.ui.screens
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -113,6 +114,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
 
 
 
+@SuppressLint("SuspiciousIndentation")
 @Composable
 fun NextSongComponent(mediaViewModel: MediaViewModel){
     val nextSong by mediaViewModel.nextSong.collectAsState();

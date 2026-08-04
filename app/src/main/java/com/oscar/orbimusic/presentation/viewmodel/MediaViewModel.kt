@@ -43,8 +43,23 @@ class MediaViewModel (private val songRepository: SongRepository,
     private val _shuffle =  MutableStateFlow<Boolean>(false);
     val shuffle: StateFlow<Boolean> = _shuffle.asStateFlow();
 
+    private val _repeat = MutableStateFlow<Boolean>(false);
+    val repeat: StateFlow<Boolean> = _repeat.asStateFlow();
+
+
+    fun setRepeat(status: Boolean){
+        _repeat.value = status;
+
+        if(_shuffle.value){
+            _shuffle.value = false
+        }
+    }
     fun setShuffle(status: Boolean){
         _shuffle.value = status;
+
+        if(_repeat.value){
+            _repeat.value = false
+        }
     }
 
 
@@ -183,7 +198,10 @@ class MediaViewModel (private val songRepository: SongRepository,
         val current = currentState.currentIndex;
         var nextIndex = currentState.currentIndex + 1
 
-
+        if(_repeat.value){
+            playSong(currentState.queue[current], current)
+            return;
+        }
 
         if(_shuffle.value){
             nextIndex = Random.nextInt(0, currentState.queue.size);
@@ -191,7 +209,6 @@ class MediaViewModel (private val songRepository: SongRepository,
                 nextIndex = Random.nextInt(0, currentState.queue.size);
             }
         }
-
 
         if (nextIndex < currentState.queue.size) {
             playSong(currentState.queue[nextIndex], nextIndex)
