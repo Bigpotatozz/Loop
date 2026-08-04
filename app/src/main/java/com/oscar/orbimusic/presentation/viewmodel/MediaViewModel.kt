@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 
 class MediaViewModel (private val songRepository: SongRepository,
@@ -38,6 +39,9 @@ class MediaViewModel (private val songRepository: SongRepository,
 
     private val _nextSong = MutableStateFlow<Song?>(null)
     val nextSong: StateFlow<Song?> = _nextSong.asStateFlow()
+
+    private val _shuffle =  MutableStateFlow<Boolean>(true);
+    val shuffle: StateFlow<Boolean> = _shuffle.asStateFlow();
 
 
     fun setExpanded(status: Boolean){
@@ -172,7 +176,18 @@ class MediaViewModel (private val songRepository: SongRepository,
 
     fun playNext() {
         val currentState = _playerState.value
-        val nextIndex = currentState.currentIndex + 1
+        val current = currentState.currentIndex;
+        var nextIndex = currentState.currentIndex + 1
+
+
+
+        if(_shuffle.value){
+            nextIndex = Random.nextInt(0, currentState.queue.size);
+            if(nextIndex == current){
+                nextIndex = Random.nextInt(0, currentState.queue.size);
+            }
+        }
+
 
         if (nextIndex < currentState.queue.size) {
             playSong(currentState.queue[nextIndex], nextIndex)
