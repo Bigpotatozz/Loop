@@ -169,7 +169,7 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaVi
 fun Navbar(navController: NavController){
     var selectedItem by rememberSaveable{ mutableStateOf(0) }
 
-    val items = listOf("home", "media", "search");
+    val items = listOf("Home", "Media", "Search");
     val selectedIcons = listOf(Icons.Filled.Home, Icons.Filled.Album, Icons.Filled.Search);
     val unselectedIcons = listOf(Icons.Filled.Home, Icons.Filled.Album, Icons.Filled.Search);
 
