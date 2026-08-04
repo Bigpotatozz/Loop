@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,8 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.filled.QueuePlayNext
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -38,6 +42,7 @@ import com.oscar.orbimusic.domain.model.PlayerState
 import com.oscar.orbimusic.presentation.ui.components.PastPrevMediaSong
 import com.oscar.orbimusic.presentation.utils.parseTime
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
+import androidx.compose.ui.layout.ContentScale
 
 
 /*playerState: PlayerState, mediaViewModel: MediaViewModel*/
@@ -53,17 +58,13 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
         horizontalAlignment = Alignment.CenterHorizontally,) {
 
         Row(Modifier.padding(10.dp).fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-
             Icon(
-
                 imageVector = Icons.Filled.KeyboardArrowDown,
                 contentDescription = "prev",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(25.dp).clickable(onClick = {
                     mediaViewModel.setExpanded(false);
                 })
-
-
             )
 
         }
@@ -76,7 +77,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             modifier = Modifier.clip(RoundedCornerShape(25.dp)).size(300.dp),
         )
 
-        Spacer(Modifier.padding(20.dp))
+        Spacer(Modifier.padding(15.dp))
 
 
         Text(
@@ -88,7 +89,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             style = MaterialTheme.typography.headlineSmall.copy(fontSize = 18.sp, color = Color.Gray))
 
 
-        Row(Modifier.padding(5.dp)) {
+        Row(Modifier) {
             PastPrevMediaSong(
                 playerState,
                 mediaViewModel,
@@ -100,9 +101,68 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             )
         }
 
+
+        Box(Modifier.padding(15.dp)){
+            NextSongComponent(mediaViewModel)
+        }
+
+
+
+
     }
 
 }
+
+
+
+@Composable
+
+fun NextSongComponent(mediaViewModel: MediaViewModel){
+
+    val nextSong by mediaViewModel.nextSong.collectAsState();
+
+
+
+        Row(Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(15.dp))
+            .background(MaterialTheme.colorScheme.primary),
+            verticalAlignment = Alignment.CenterVertically) {
+
+            Row(Modifier.weight(0.7f).padding(5.dp),
+                verticalAlignment = Alignment.CenterVertically){
+                AsyncImage(model = nextSong?.albumArtPath,
+                    contentDescription = "Imagen de album",
+                    Modifier.clip(RoundedCornerShape(15.dp)).size(60.dp),
+                    contentScale = ContentScale.Crop,)
+
+
+                Column(Modifier.padding(start = 12.dp)) {
+                        Text(nextSong?.title ?: "Sin titulo",
+                            style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp),)
+
+
+                    Text(nextSong?.artist ?: "Sin artista",
+                        style = MaterialTheme.typography.titleSmall.copy(fontSize = 10.sp, color = Color.Gray),)
+                }
+            }
+
+            Icon( imageVector = Icons.Filled.QueuePlayNext,
+                contentDescription = "next",
+                modifier = Modifier.size(30.dp)
+                    .weight(0.3f)
+                    .clickable(onClick = {
+                    mediaViewModel.playNext()
+                }))
+
+
+
+
+
+
+
+        }
+
+    }
 
 
 

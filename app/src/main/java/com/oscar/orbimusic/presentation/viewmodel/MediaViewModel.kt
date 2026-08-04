@@ -36,6 +36,10 @@ class MediaViewModel (private val songRepository: SongRepository,
     private val _isExpanded = MutableStateFlow<Boolean>(false);
     val isExpanded: StateFlow<Boolean> = _isExpanded.asStateFlow();
 
+    private val _nextSong = MutableStateFlow<Song?>(null)
+    val nextSong: StateFlow<Song?> = _nextSong.asStateFlow()
+
+
     fun setExpanded(status: Boolean){
         _isExpanded.value = status;
     };
@@ -48,6 +52,7 @@ class MediaViewModel (private val songRepository: SongRepository,
         Log.d("OSCAR","${allSongs}");
         connectToAudioService()
         startUpdatingProgress()
+        getNextSong()
     }
 
     private fun startUpdatingProgress() {
@@ -154,6 +159,17 @@ class MediaViewModel (private val songRepository: SongRepository,
         }
     }
 
+    fun getNextSong() {
+        viewModelScope.launch {
+            _playerState.collect { state ->
+                val nextIndexSong = state.currentIndex + 1;
+                _nextSong.value = if(nextIndexSong < state.queue.size){
+                    state.queue[nextIndexSong];
+                }else null
+            }
+        }
+    }
+
     fun playNext() {
         val currentState = _playerState.value
         val nextIndex = currentState.currentIndex + 1
@@ -161,7 +177,10 @@ class MediaViewModel (private val songRepository: SongRepository,
         if (nextIndex < currentState.queue.size) {
             playSong(currentState.queue[nextIndex], nextIndex)
         }
+
     }
+
+
 
     fun playPrevious() {
         val currentState = _playerState.value

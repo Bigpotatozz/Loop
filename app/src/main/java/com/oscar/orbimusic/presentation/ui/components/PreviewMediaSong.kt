@@ -21,6 +21,8 @@ import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -122,50 +124,6 @@ fun PastPrevMediaSong(playerState: PlayerState,
                       currentPositionMedia: Long,
                       parseTime: (time: Long) -> Unit){
     Column () {
-        Row (modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-
-
-            Icon( imageVector = Icons.Filled.FastRewind,
-                contentDescription = "prev",
-                modifier = Modifier.size(30.dp).clickable(onClick = {
-                    mediaViewModel.playPrevious();
-                }),
-                tint = MaterialTheme.colorScheme.primary
-            )
-
-
-            Spacer(Modifier.padding(20.dp))
-            Button(
-                onClick = {
-                    if (playerState.isPlaying) {
-                        mediaViewModel.togglePlayPause()
-                    } else {
-                        mediaViewModel.playSong(playerState.currentSong, playerState.currentIndex);
-                    }
-                },
-            ) {
-
-                if(playerState.isPlaying){
-                    Icon(Icons.Filled.Pause, contentDescription = "Pause")
-                }else{
-                    Icon(Icons.Filled.PlayArrow, contentDescription = "Play")
-                }
-
-            }
-            Spacer(Modifier.padding(20.dp))
-
-            Icon( imageVector = Icons.Filled.FastForward,
-                contentDescription = "next",
-                modifier = Modifier.size(30.dp).clickable(onClick = {
-                    mediaViewModel.playNext()
-                }),
-                tint = MaterialTheme.colorScheme.primary)
-
-
-
-
-
-        }
 
 
         Row(Modifier
@@ -206,6 +164,71 @@ fun PastPrevMediaSong(playerState: PlayerState,
 
 
         }
+        Row (modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+
+            Icon( imageVector = Icons.Filled.Shuffle,
+                contentDescription = "shuffle",
+                modifier = Modifier.size(25.dp).clickable(onClick = {
+                    mediaViewModel.playNext()
+                }),
+                tint = Color.Gray)
+
+            Spacer(Modifier.padding(5.dp))
+
+
+            Icon( imageVector = Icons.Filled.FastRewind,
+                contentDescription = "prev",
+                modifier = Modifier.size(30.dp).clickable(onClick = {
+                    mediaViewModel.playPrevious();
+                }),
+                tint = MaterialTheme.colorScheme.primary
+            )
+
+
+            Spacer(Modifier.padding(10.dp))
+            Button(
+                onClick = {
+                    if (playerState.isPlaying) {
+                        mediaViewModel.togglePlayPause()
+                    } else {
+                        mediaViewModel.playSong(playerState.currentSong, playerState.currentIndex);
+                    }
+                },
+            ) {
+
+                if(playerState.isPlaying){
+                    Icon(Icons.Filled.Pause, contentDescription = "Pause")
+                }else{
+                    Icon(Icons.Filled.PlayArrow, contentDescription = "Play")
+                }
+
+            }
+            Spacer(Modifier.padding(10.dp))
+
+            Icon( imageVector = Icons.Filled.FastForward,
+                contentDescription = "next",
+                modifier = Modifier.size(30.dp).clickable(onClick = {
+                    mediaViewModel.playNext()
+                }),
+                tint = MaterialTheme.colorScheme.primary)
+
+            Spacer(Modifier.padding(5.dp))
+
+            Icon( imageVector = Icons.Filled.Repeat,
+                contentDescription = "next",
+                modifier = Modifier.size(25.dp).clickable(onClick = {
+                    mediaViewModel.playNext()
+                }),
+                tint = Color.Gray)
+
+
+
+
+
+        }
+
+
+
 
     }
 
