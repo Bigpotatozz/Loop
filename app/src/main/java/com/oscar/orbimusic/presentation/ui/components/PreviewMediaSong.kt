@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -122,7 +123,7 @@ fun PastPrevMediaSong(playerState: PlayerState,
                       mediaViewModel: MediaViewModel,
                       duration: Long,
                       currentPositionMedia: Long,
-                      parseTime: (time: Long) -> Unit){
+                      parseTime: (time: Long) -> String){
     Column () {
 
 
@@ -130,8 +131,9 @@ fun PastPrevMediaSong(playerState: PlayerState,
             .fillMaxWidth()
             .padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
 
+            Text(parseTime(currentPositionMedia), fontSize = 11.sp, color = Color.Gray)
 
-            //Text( if(duration < 0) "" else parseTime(currentPositionMedia), fontSize = 12.sp)
+
 
             Slider(
                 value = if (duration > 0) currentPositionMedia.toFloat() else 0f,
@@ -142,7 +144,15 @@ fun PastPrevMediaSong(playerState: PlayerState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(0.6f),
-                thumb = {},
+                thumb = {
+                    Box(
+                        modifier = Modifier
+                            .width(4.dp)
+                            .height(20.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.tertiary)
+                    )
+                },
                 colors = SliderDefaults.colors(
                     activeTrackColor = MaterialTheme.colorScheme.tertiary,
                     inactiveTrackColor = Color.Gray
@@ -160,7 +170,10 @@ fun PastPrevMediaSong(playerState: PlayerState,
                     )
                 }
             )
-            //Text(if(duration < 0) "" else parseTime(duration), fontSize = 12.sp)
+
+
+
+            Text(parseTime(duration), fontSize = 11.sp, color = Color.Gray)
 
 
         }
