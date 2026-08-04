@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -121,9 +122,19 @@ fun PastPrevMediaSong(playerState: PlayerState,
                       currentPositionMedia: Long,
                       parseTime: (time: Long) -> Unit){
     Column () {
-        Row (modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+        Row (modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
 
 
+            Icon( imageVector = Icons.Filled.FastRewind,
+                contentDescription = "prev",
+                modifier = Modifier.size(30.dp).clickable(onClick = {
+                    mediaViewModel.playPrevious();
+                }),
+                tint = MaterialTheme.colorScheme.primary
+            )
+
+
+            Spacer(Modifier.padding(20.dp))
             Button(
                 onClick = {
                     if (playerState.isPlaying) {
@@ -141,6 +152,19 @@ fun PastPrevMediaSong(playerState: PlayerState,
                 }
 
             }
+            Spacer(Modifier.padding(20.dp))
+
+            Icon( imageVector = Icons.Filled.FastForward,
+                contentDescription = "next",
+                modifier = Modifier.size(30.dp).clickable(onClick = {
+                    mediaViewModel.playNext()
+                }),
+                tint = MaterialTheme.colorScheme.primary)
+
+
+
+
+
         }
 
 
@@ -163,7 +187,7 @@ fun PastPrevMediaSong(playerState: PlayerState,
                 thumb = {},
                 colors = SliderDefaults.colors(
                     activeTrackColor = MaterialTheme.colorScheme.tertiary,
-                    inactiveTrackColor = Color.Black.copy(alpha = 0.3f)
+                    inactiveTrackColor = Color.Gray
                 ),
                 track = { sliderState ->
                     SliderDefaults.Track(
@@ -173,7 +197,7 @@ fun PastPrevMediaSong(playerState: PlayerState,
                             .clip(RoundedCornerShape(10.dp)),
                         colors = SliderDefaults.colors(
                             activeTrackColor = MaterialTheme.colorScheme.tertiary,
-                            inactiveTrackColor = Color.Black
+                            inactiveTrackColor = Color.Gray
                         )
                     )
                 }

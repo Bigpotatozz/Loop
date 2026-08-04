@@ -68,14 +68,7 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
     val currentPositionMedia by mediaViewModel.currentPosition.collectAsState();
 
 
-    fun parseTime(duration: Long): String {
-        if (duration < 0) return "0:00"
-        val durationInSeconds = duration / 1000
-        val minutes = durationInSeconds / 60
-        val seconds = durationInSeconds % 60
 
-        return String.format(java.util.Locale.getDefault(), "%d:%02d", minutes, seconds)
-    }
 
     val durationInSeconds = duration / 1000
     val minutes = durationInSeconds / 60
@@ -200,12 +193,7 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
 
             Column() {
-                ExpandedPlayerScreen(Modifier,
-                    "Perfecta live music",
-                    "Eksa y Elmar",
-                    duration = 40001,
-                    isPlaying = false
-                );
+                ExpandedPlayerScreen(playerState, mediaViewModel);
             }
 
         }

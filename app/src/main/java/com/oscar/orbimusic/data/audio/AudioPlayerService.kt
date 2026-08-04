@@ -241,6 +241,7 @@ class AudioPlayerService: Service() {
 
             //El servicio salta a un archivo especifico
             player.seekToDefaultPosition(currentIndex)
+            player.seekTo(0)
             //Reproduce el archivo
             player.play()
             Log.d("AudioService", "Siguiente canción: $currentIndex")

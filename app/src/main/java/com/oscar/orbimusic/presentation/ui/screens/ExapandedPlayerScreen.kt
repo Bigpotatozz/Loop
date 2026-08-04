@@ -3,20 +3,29 @@ package com.oscar.orbimusic.presentation.ui.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -26,41 +35,68 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.oscar.orbimusic.R
 import com.oscar.orbimusic.domain.model.PlayerState
+import com.oscar.orbimusic.presentation.ui.components.PastPrevMediaSong
+import com.oscar.orbimusic.presentation.utils.parseTime
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
 
 
 /*playerState: PlayerState, mediaViewModel: MediaViewModel*/
 @Composable
-fun ExpandedPlayerScreen(modifier: Modifier = Modifier,
-                         title: String,
-                         artist: String,
-                         duration: Long,
-                         isPlaying: Boolean = false){
+fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewModel){
 
-    Column(modifier = Modifier.fillMaxSize().background(Color.Black),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center) {
+    val currentPositionSong by mediaViewModel.currentPosition.collectAsState();
+
+    Column(modifier = Modifier.fillMaxSize()
+        .padding(8.dp)
+        .clip(RoundedCornerShape(25.dp))
+        .background(Color.Black),
+        horizontalAlignment = Alignment.CenterHorizontally,) {
+
+        Row(Modifier.padding(10.dp).fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+
+            Icon(
+
+                imageVector = Icons.Filled.KeyboardArrowDown,
+                contentDescription = "prev",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(25.dp)
 
 
-        /*
+            )
+
+        }
+
+
+
         AsyncImage(
-            model = R.drawable.ic_launcher_background,
-            contentDescription = title,
-            modifier = Modifier.size(100.dp)
+            model = playerState.currentSong?.albumArtPath,
+            contentDescription = playerState.currentSong?.title,
+            modifier = Modifier.clip(RoundedCornerShape(25.dp)).size(300.dp),
         )
-        */
-        Image(modifier = Modifier.clip(RoundedCornerShape(20.dp)).size(300.dp),
-            painter = painterResource(id = R.drawable.bdportada),
-            contentDescription = "Imagen de ejemplo")
 
         Spacer(Modifier.padding(20.dp))
 
 
-        Text(title,
-            style = MaterialTheme.typography.labelLarge.copy(fontSize = 24.sp, color = Color.White),)
+        Text(
+            playerState.currentSong?.title ?: "SIN TITULO",
+            style = MaterialTheme.typography.labelLarge.copy(fontSize = 24.sp, color = Color.White),
+            )
+        Text(
+            playerState.currentSong?.artist ?: "SIN ARTISTA",
+            style = MaterialTheme.typography.headlineSmall.copy(fontSize = 18.sp, color = Color.Gray))
 
 
-
+        Row(Modifier.padding(5.dp)) {
+            PastPrevMediaSong(
+                playerState,
+                mediaViewModel,
+                playerState.currentSong!!.duration,
+                currentPositionSong,
+                parseTime = {
+                    parseTime(playerState.currentSong.duration)
+                }
+            )
+        }
 
     }
 
@@ -68,18 +104,3 @@ fun ExpandedPlayerScreen(modifier: Modifier = Modifier,
 
 
 
-
-
-@Composable
-@Preview(showSystemUi = true)
-fun ExpandedPlayerScreen2(){
-
-    Column() {
-        ExpandedPlayerScreen(Modifier,
-            "Perfecta live music",
-            "Eksa y Elmar",
-            duration = 40001,
-            isPlaying = false
-            );
-    }
-};

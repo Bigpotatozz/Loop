@@ -124,6 +124,8 @@ class MediaViewModel (private val songRepository: SongRepository,
             )
         }
 
+        _currentPosition.value = 0L
+
         audioService?.setPlaylist(_allSongs.value, index)
         audioService?.play()
     }
