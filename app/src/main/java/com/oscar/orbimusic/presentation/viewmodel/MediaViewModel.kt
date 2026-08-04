@@ -195,6 +195,16 @@ class MediaViewModel (private val songRepository: SongRepository,
 
     }
 
+    fun playNextNoShuffle(){
+        val currentState = _playerState.value
+        val current = currentState.currentIndex;
+        val nextIndex = currentState.currentIndex + 1
+
+        if (nextIndex < currentState.queue.size) {
+            playSong(currentState.queue[nextIndex], nextIndex)
+        }
+    }
+
 
 
     fun playPrevious() {

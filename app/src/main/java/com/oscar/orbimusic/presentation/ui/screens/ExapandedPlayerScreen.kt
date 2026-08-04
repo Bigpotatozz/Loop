@@ -106,9 +106,6 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             NextSongComponent(mediaViewModel)
         }
 
-
-
-
     }
 
 }
@@ -116,12 +113,8 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
 
 
 @Composable
-
 fun NextSongComponent(mediaViewModel: MediaViewModel){
-
     val nextSong by mediaViewModel.nextSong.collectAsState();
-
-
 
         Row(Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(15.dp))
@@ -151,15 +144,8 @@ fun NextSongComponent(mediaViewModel: MediaViewModel){
                 modifier = Modifier.size(30.dp)
                     .weight(0.3f)
                     .clickable(onClick = {
-                    mediaViewModel.playNext()
+                    mediaViewModel.playNextNoShuffle()
                 }))
-
-
-
-
-
-
-
         }
 
     }
