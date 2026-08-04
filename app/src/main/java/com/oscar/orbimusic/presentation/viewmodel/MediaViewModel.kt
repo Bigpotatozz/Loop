@@ -33,6 +33,13 @@ class MediaViewModel (private val songRepository: SongRepository,
     private val _duration = MutableStateFlow(0L);
     val duration: StateFlow<Long> = _duration.asStateFlow();
 
+    private val _isExpanded = MutableStateFlow<Boolean>(false);
+    val isExpanded: StateFlow<Boolean> = _isExpanded.asStateFlow();
+
+    fun setExpanded(status: Boolean){
+        _isExpanded.value = status;
+    };
+
 
 
 

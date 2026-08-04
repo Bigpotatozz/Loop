@@ -66,6 +66,8 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
     val playerState by mediaViewModel.playerState.collectAsState();
     val duration by mediaViewModel.duration.collectAsState();
     val currentPositionMedia by mediaViewModel.currentPosition.collectAsState();
+    val isExpanded by mediaViewModel.isExpanded.collectAsState();
+
 
 
 
@@ -75,11 +77,6 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
     val seconds = durationInSeconds % 60
 
     val stateList = remember { mutableStateListOf(false, false, true) }
-
-
-    var isExpanded by rememberSaveable{ mutableStateOf(false) };
-
-
 
 
 
@@ -180,7 +177,7 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                                 bottomEnd = 20.dp
                             )
                         ).clickable(onClick = {
-                            isExpanded = true
+                            mediaViewModel.setExpanded(true);
                         })){
                         PrevMediaSong(playerState, mediaViewModel)
                     }

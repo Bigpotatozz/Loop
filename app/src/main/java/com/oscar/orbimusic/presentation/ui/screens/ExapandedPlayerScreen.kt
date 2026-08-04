@@ -59,7 +59,9 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 imageVector = Icons.Filled.KeyboardArrowDown,
                 contentDescription = "prev",
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(25.dp)
+                modifier = Modifier.size(25.dp).clickable(onClick = {
+                    mediaViewModel.setExpanded(false);
+                })
 
 
             )
