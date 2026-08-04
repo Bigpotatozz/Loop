@@ -40,8 +40,12 @@ class MediaViewModel (private val songRepository: SongRepository,
     private val _nextSong = MutableStateFlow<Song?>(null)
     val nextSong: StateFlow<Song?> = _nextSong.asStateFlow()
 
-    private val _shuffle =  MutableStateFlow<Boolean>(true);
+    private val _shuffle =  MutableStateFlow<Boolean>(false);
     val shuffle: StateFlow<Boolean> = _shuffle.asStateFlow();
+
+    fun setShuffle(status: Boolean){
+        _shuffle.value = status;
+    }
 
 
     fun setExpanded(status: Boolean){

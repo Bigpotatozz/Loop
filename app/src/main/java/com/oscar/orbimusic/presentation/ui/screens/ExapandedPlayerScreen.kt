@@ -51,6 +51,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
 
     val currentPositionSong by mediaViewModel.currentPosition.collectAsState();
 
+
     Column(modifier = Modifier.fillMaxSize()
         .padding(8.dp)
         .clip(RoundedCornerShape(25.dp))
