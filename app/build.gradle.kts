@@ -71,5 +71,7 @@ dependencies {
     //Media session
     implementation("androidx.media:media:1.6.0")
 
+    // yt-dlp para descargas
+    implementation("com.github.yausername:youtubedl-android:85f29f8f35")
 
 }
