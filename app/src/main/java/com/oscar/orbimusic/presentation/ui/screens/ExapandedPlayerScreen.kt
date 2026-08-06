@@ -21,6 +21,11 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.QueuePlayNext
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -59,27 +64,63 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
         .background(Color.Black),
         horizontalAlignment = Alignment.CenterHorizontally,) {
 
-        Row(Modifier.padding(10.dp).fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            Icon(
-                imageVector = Icons.Filled.KeyboardArrowDown,
-                contentDescription = "prev",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(25.dp).clickable(onClick = {
-                    mediaViewModel.setExpanded(false);
-                })
-            )
+        Row(Modifier.padding(start = 20.dp, top = 15.dp, bottom = 15.dp, end = 20.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
 
+
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(100))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                    .padding(6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.KeyboardArrowDown,
+                    contentDescription = "Cerrar",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp).clickable(onClick = {
+                        mediaViewModel.setExpanded(false);
+                    })
+                )
+            }
+
+
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                ModeIndicator(mediaViewModel = mediaViewModel)
+            }
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(100))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                    .padding(6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.FavoriteBorder,
+                    contentDescription = "Favorito",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp).clickable(onClick = {
+                        // TODO: Agregar a favoritos
+                    })
+                )
+            }
         }
+
+        Spacer(Modifier.padding(10.dp))
+
+
 
 
 
         AsyncImage(
             model = playerState.currentSong?.albumArtPath,
             contentDescription = playerState.currentSong?.title,
-            modifier = Modifier.clip(RoundedCornerShape(25.dp)).size(300.dp),
+            modifier = Modifier.clip(RoundedCornerShape(25.dp)).size(290.dp),
         )
 
-        Spacer(Modifier.padding(15.dp))
+        Spacer(Modifier.padding(5.dp))
 
 
         Text(
@@ -112,6 +153,62 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
 
 }
 
+
+
+@Composable
+fun ModeIndicator(mediaViewModel: MediaViewModel) {
+    val shuffle by mediaViewModel.shuffle.collectAsState()
+    val repeat by mediaViewModel.repeat.collectAsState()
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            shuffle -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.Shuffle,
+                        contentDescription = "Shuffle activo",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.padding(4.dp))
+                    Text(
+                        "Shuffle",
+                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary),
+                    )
+                }
+            }
+            repeat -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.Repeat,
+                        contentDescription = "Repeat activo",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.padding(4.dp))
+                    Text(
+                        "Repeat",
+                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary),
+                    )
+                }
+            }
+            else -> {
+                Text(
+                    "Normal",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                    ),
+                )
+            }
+        }
+    }
+}
 
 
 @SuppressLint("SuspiciousIndentation")
