@@ -1,0 +1,183 @@
+package com.oscar.orbimusic.data.audio
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Binder
+import android.os.Build
+import android.os.IBinder
+import android.util.Log
+import androidx.annotation.OptIn
+import androidx.core.app.NotificationCompat
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.offline.DownloadService
+import com.oscar.orbimusic.R
+import com.yausername.youtubedl_android.YoutubeDL
+import com.yausername.youtubedl_android.YoutubeDLException
+import com.yausername.youtubedl_android.YoutubeDLRequest
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import java.io.File
+
+
+@UnstableApi
+class DownloadMusicService: Service() {
+
+    //Inicializa el binder para que el viewModel se pueda conectar
+    private val binder =  DownloadServiceBinder();
+    //Establece el hilo que se usara para las descargas, se usa SupervisorJob para que las otras acciones continuen apesar de que falle una previa
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO);
+
+
+    // Es un callback que modificable donde se indicara que pasara cuando exista un error o se descargue una cancion correctamente
+    private var downloadListener: ((DownloadProgress) -> Unit)? = null;
+
+    companion object {
+        //Canal para la notificacion
+        private const val CHANNEL_ID = "music_download_channel"
+        // ID de la notificación
+        private const val NOTIFICATION_ID = 2
+    }
+
+
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Crea un canal con prioridad baja (no hace ruido ni vibra)
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Music Downloads",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+
+    //Funcion que inicializa y actualiza la libreria de YoutubeDL
+    private fun initializeYtDL(){
+        scope.launch {
+            try{
+                YoutubeDL.getInstance().updateYoutubeDL(this@DownloadMusicService)
+                Log.d("DownloadService", "YouTubeDL initialized")
+            }catch (e: YoutubeDLException){
+                Log.e("DownloadService", "Error initializing YouTubeDL", e)
+            }
+        }
+    }
+
+    // Permite que el ViewModel se entere de los cambios de descarga
+    @OptIn(UnstableApi::class)
+    fun setDownloadListener(listener: (DownloadProgress) -> Unit) {
+        downloadListener = listener
+    }
+
+
+    fun downloadFromYt(youtubeUrl: String, title: String){
+        scope.launch {
+
+            try {
+                updateNotification("Descargando: $title", 0);
+
+                val musicDir = getMusicDirectory();
+
+                val request = YoutubeDLRequest(youtubeUrl).apply {
+                    addOption("-f", "bestaudio[ext=m4a]/best");
+                    addOption("-x")
+                    addOption("-o", "${musicDir.absolutePath}/%(title)s.%(ext)s")
+                }
+
+                //Eejcuta la descarga
+                val result = YoutubeDL.getInstance().execute(request);
+
+                if (result.exitCode == 0){
+                    updateNotification("Descarga completada: $title", 100);
+                    downloadListener?.invoke(
+                        DownloadProgress(
+                            isCompleted = true,
+                            error = null,
+                            downloadedPath = musicDir.absolutePath
+                        )
+                    );
+                    Log.d("DownloadService", "Download completed: $title")
+                }
+
+
+
+            }catch (e: Exception){
+                Log.e("DownloadService", "Download error", e)
+                updateNotification("Error en descarga", 0)
+                // Notifica el error al ViewModel
+                downloadListener?.invoke(
+                    DownloadProgress(
+                        isCompleted = false,
+                        error = e.message ?: "Unknown error"
+                    )
+                )
+            }
+
+        }
+    }
+
+    private fun getMusicDirectory(): File{
+        val dir = File(
+            getExternalFilesDir(null),
+            "Downloads/Music"
+        )
+
+        if (!dir.exists()) {
+            dir.mkdirs()
+        }
+        return dir;
+    }
+
+
+    private fun updateNotification(title: String, progress: Int){
+
+        //Construye la notificacion
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("OrbiMusic - Descargas") // Título fijo
+            .setContentText(title) // Texto variable (título de la canción, estado)
+            .setSmallIcon(R.drawable.ic_launcher_foreground) // Icono
+            .setProgress(100, progress, false) // Barra de progreso (0-100)
+            .setPriority(NotificationCompat.PRIORITY_LOW) // Baja prioridad
+            .build()
+
+        // Convierte el servicio en "foreground service" - aparece notificación permanente
+        // Esto previene que el sistema lo cierre por falta de memoria
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
+    };
+
+
+    // Retorna el binder para que otras apps se conecten a este servicio
+    override fun onBind(intent: Intent?): IBinder = binder;
+
+    // Se ejecuta cuando se destruye el servicio
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel() // Cancela todas las coroutines en progreso
+    }
+
+    inner class DownloadServiceBinder : Binder() {
+        fun getService(): DownloadMusicService = this@DownloadMusicService
+    }
+
+}
+
+
+data class DownloadProgress(
+    val isCompleted: Boolean = false,
+    val error: String? = null,
+    val downloadedPath: String? = null,
+    val progress: Int = 0
+)
