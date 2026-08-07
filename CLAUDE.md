@@ -15,6 +15,9 @@ app/src/main/java/com/oscar/orbimusic/
 │   ├── audio/                 # Servicios de audio
 │   │   ├── AudioPlayerService.kt
 │   │   ├── AudioServiceConnection.kt
+│   │   ├── DownloadMusicService.kt         # ✨ Nuevo
+│   │   ├── DownloadServiceConnection.kt    # ✨ Nuevo
+│   │   ├── DownloadProgress.kt             # ✨ Nuevo (data class)
 │   │   └── FileScanner.kt
 │   └── local/database/        # Room Database
 │       ├── SongDao.kt
@@ -33,11 +36,13 @@ app/src/main/java/com/oscar/orbimusic/
 │   │   │   ├── PreviewMediaSong.kt
 │   │   │   └── PastPrevMediaSong.kt
 │   │   └── screens/
-│   │       └── ExapandedPlayerScreen.kt
+│   │       ├── ExapandedPlayerScreen.kt
+│   │       └── DownloadScreen.kt           # ✨ Nuevo (en desarrollo)
 │   ├── utils/
 │   │   └── parseTime.kt
 │   └── viewmodel/
-│       └── MediaViewModel.kt
+│       ├── MediaViewModel.kt
+│       └── DownloadViewModel.kt            # ✨ Nuevo
 ├── di/
 │   └── AppModule.kt
 └── MainActivity.kt
@@ -54,13 +59,19 @@ app/src/main/java/com/oscar/orbimusic/
 - ✅ Pantalla expandida del reproductor
 - ✅ Indicador de modo (Normal/Shuffle/Repeat)
 - ✅ Botones con estilos mejorados (favorito, cerrar)
+- ✅ **Descarga de música desde YouTube (backend)**
+  - DownloadMusicService funcional
+  - Descarga de audio M4A con metadatos
+  - Integración con FileScanner para escaneo automático
+  - Notificaciones de progreso
+  - Guardado en carpeta privada de app
 
 ## 🚀 Características en Desarrollo
 
-- 🔄 **Implementación de YouTubeDL-Android**
-  - Descargar música desde YouTube
-  - Integración con el reproductor existente
-  - Permisos y servicio de descargas
+- 🔄 **UI para descargas**
+  - DownloadScreen (pantalla de búsqueda)
+  - Diálogo de descarga con progreso
+  - Integración con DownloadViewModel
 
 ## 📋 Decisiones Arquitectónicas
 
@@ -103,8 +114,9 @@ androidx.room:room-ktx
 // Networking/Images
 io.coil-kt:coil-compose:2.5.0
 
-// Descargas (Nueva)
-com.github.yausername:youtubedl-android
+// Descargas ✨
+io.github.junkfood02.youtubedl-android:library:0.18.1
+io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1
 ```
 
 ## 📌 Convenciones de Código
@@ -139,14 +151,40 @@ com.github.yausername:youtubedl-android
 ## 📝 Próximas Tareas
 
 1. ✅ Mejorar header del ExpandedPlayerScreen
-2. 🔄 Implementar YouTubeDL
-   - Agregar permisos (lectura/escritura de almacenamiento)
-   - Crear servicio de descargas
-   - Integrar con MediaViewModel
-   - UI para descargar canciones
-3. 🔄 Sistema de favoritos
-4. 🔄 Historial de reproducción
-5. 🔄 Playlists personalizadas
+2. ✅ Backend de YouTubeDL completado
+   - ✅ Agregar permisos
+   - ✅ Crear DownloadMusicService
+   - ✅ Integrar con FileScanner
+   - ✅ Descargas con metadatos
+3. 🔄 **UI para descargas (PRIORIDAD)**
+   - Crear DownloadScreen con búsqueda
+   - Implementar diálogo de descarga
+   - Mostrar progreso en tiempo real
+4. 🔄 Sistema de favoritos
+5. 🔄 Historial de reproducción
+6. 🔄 Playlists personalizadas
+
+## 🔧 Notas Técnicas de la Sesión
+
+### DownloadMusicService
+- Servicio de foreground que descarga desde YouTube
+- Usa YouTubeDL (yt-dlp) para extraer audio
+- Configura `--add-metadata` y `--embed-metadata` para metadatos
+- Requiere FFmpeg inicializado para procesar metadatos
+- Guarda en `/data/data/com.oscar.orbimusic/files/Music/`
+- Notifica mediante callback `DownloadProgress`
+
+### Sincronización con FileScanner
+- FileScanner escanea la misma carpeta que DownloadService
+- Al completar descarga, `scanMusicFolder()` la detecta automáticamente
+- Metadatos se extraen con `MediaMetadataRetriever`
+- Las canciones descargadas aparecen en MediaScreen sin recargar
+
+### Problemas Resueltos
+- Native libraries no se empaquetaban: agregado `useLegacyPackaging = true`
+- YouTubeDL no se inicializaba: Agregado `YoutubeDL.getInstance().init()`
+- Metadatos no se incluían: Agregado `--add-metadata` y `--embed-metadata`
+- FFmpeg no estaba inicializado: Descomentado `FFmpeg.getInstance().init()`
 
 ## 🐛 Notas Técnicas Importantes
 
@@ -161,6 +199,27 @@ com.github.yausername:youtubedl-android
 <!-- AndroidManifest.xml -->
 - READ_EXTERNAL_STORAGE
 - READ_MEDIA_AUDIO
+- WRITE_EXTERNAL_STORAGE          ✨ Para descargas
+- INTERNET                        ✨ Para YouTube
+- FOREGROUND_SERVICE              ✨ Servicio de descargas
+- FOREGROUND_SERVICE_MEDIA_PLAYBACK
+- FOREGROUND_SERVICE_DATA_SYNC    ✨ Para descargas en foreground
+- requestLegacyExternalStorage    ✨ Android 10 compatibility
+```
+
+### Configuración Build Gradle
+```kotlin
+// Packaging
+packaging {
+    jniLibs {
+        useLegacyPackaging = true  // ✨ Para native libraries
+    }
+}
+
+// ABI Filters
+ndk {
+    abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64"))
+}
 ```
 
 ## 🔗 Referencias
@@ -173,5 +232,5 @@ com.github.yausername:youtubedl-android
 
 ---
 
-**Última actualización:** 2026-08-05
-**Versión:** 1.0
+**Última actualización:** 2026-08-06
+**Versión:** 1.1 (YouTubeDL backend completado)

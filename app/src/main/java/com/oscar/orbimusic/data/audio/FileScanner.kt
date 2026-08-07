@@ -73,7 +73,7 @@ class FileScanner(
 
             //Extrae los datos
             val title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
-                ?: "Desconocido"
+                ?: file.nameWithoutExtension
             val artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
                 ?: "Desconocido"
             val album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)
@@ -81,14 +81,28 @@ class FileScanner(
             val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
                 ?.toLongOrNull() ?: 0L
 
-            //Cierra el archivo
-            var albumArthPath: String? = null;
+            Log.d("FileScanner", "Extraídos metadatos - Title: $title, Artist: $artist, Album: $album, Duration: $duration ms")
 
+            var albumArtPath: String? = null;
+
+            // Primero intenta extraer portada embebida
             val picture = retriever.embeddedPicture;
 
             if(picture != null){
-                albumArthPath = savePictureToFile(picture,  file.nameWithoutExtension)
+                albumArtPath = savePictureToFile(picture,  file.nameWithoutExtension)
+                Log.d("FileScanner", "Portada embebida guardada: $albumArtPath")
+            } else {
+                // Si no hay portada embebida, busca jpg en la carpeta album_art
+                val albumArtDir = File(file.parent, "arthPath")
+                val thumbnailFile = File(albumArtDir, "${file.nameWithoutExtension}.jpg") //Busca el archivo
 
+                //Si existe se lo asigna a la propiedad del objeto
+                if (thumbnailFile.exists()) {
+                    albumArtPath = thumbnailFile.path
+                    Log.d("FileScanner", "Portada de archivo encontrada: $albumArtPath")
+                } else {
+                    Log.d("FileScanner", "No hay portada embebida ni archivo jpg para: ${file.name}")
+                }
             }
 
             retriever.release();
@@ -99,11 +113,12 @@ class FileScanner(
                 artist = artist,
                 album = album,
                 duration = duration,
-                albumArtPath = albumArthPath,
+                albumArtPath = albumArtPath,
                 path = file.path);
 
 
         }catch (e: Exception){
+            Log.e("FileScanner", "Error extrayendo metadatos de ${file.name}: ${e.message}", e)
             null
         }
 

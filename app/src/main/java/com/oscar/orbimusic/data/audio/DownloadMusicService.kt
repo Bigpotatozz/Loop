@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.media.MediaMetadataRetriever
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
@@ -115,18 +116,58 @@ class DownloadMusicService: Service() {
                 val request = YoutubeDLRequest(youtubeUrl).apply {
                     addOption("-f", "bestaudio[ext=m4a]/best");
                     addOption("-x")
+                    addOption("--audio-format", "m4a")
+                    addOption("--audio-quality", "0")
                     addOption("--add-metadata")
                     addOption("--embed-metadata")
+                    addOption("--write-thumbnail") //Obtiene la imagen
+                    addOption("--convert-thumbnail", "jpg") //Guarda la imagen en jpg
                     addOption("-o", "${musicDir.absolutePath}/%(title)s.%(ext)s")
 
                 }
 
                 //Eejcuta la descarga
+                Log.d("DownloadService", "Iniciando descarga con opciones de metadatos embebidos")
                 val result = YoutubeDL.getInstance().execute(request);
 
                 if (result.exitCode == 0){
 
-                    Log.d("DownloadService", "${result}")
+                    val filesDownloaded = musicDir.listFiles(){file ->
+                        file.extension == "m4a"
+                    }?.sortedByDescending { it.lastModified() }
+
+                    if(!filesDownloaded.isNullOrEmpty()){
+                        val downloadedAudio = filesDownloaded.first();
+
+                        //Herramienta que te permite extraer metadata
+                        val retriever = MediaMetadataRetriever();
+                        retriever.setDataSource(downloadedAudio.path); //Asignamos el archivo
+                        val audioTitle = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE) //obtenemos el titulo
+                        retriever.release(); //Ejecutamos la accion
+
+                        //Verifica si existe la carpeta de imagenes y si no la crea
+                        val arthPathDir = File(musicDir, "arthPath");
+                        if(!arthPathDir.exists()){
+                            arthPathDir.mkdirs(); //Crea la carpeta
+                        }
+
+                        //Si el titulo del archivo es diferente de null
+                        if(audioTitle != null){
+                            //Buscamos la imagen que inicialmente se guarda en MusicDir
+                            val artistImage = File(musicDir, "${audioTitle}.jpg");
+                            //Si existe
+                            if(artistImage.exists()){
+                                //declaramos la nueva ruta
+                                val newArtPath = File(arthPathDir, "${audioTitle}.jpg");
+                                artistImage.renameTo(newArtPath); //Movemos a la nueva ruta
+                            }
+                        }
+
+
+
+                    }
+
+
                     updateNotification("Descarga completada: $title", 100);
                     downloadListener?.invoke(
                         DownloadProgress(
@@ -136,6 +177,10 @@ class DownloadMusicService: Service() {
                         )
                     );
                     Log.d("DownloadService", "Download completed: $title")
+                } else {
+                    Log.e("DownloadService", "Exit code: ${result.exitCode}")
+                    Log.e("DownloadService", "Error output: ${result.out}")
+                    throw Exception("YoutubeDL failed with exit code ${result.exitCode}")
                 }
 
 
