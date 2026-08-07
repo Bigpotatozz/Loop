@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,8 +56,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.rememberNavController
 import com.oscar.orbimusic.di.AppModule
+import com.oscar.orbimusic.presentation.ui.screens.DownloadScreen
+import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
 import kotlinx.coroutines.launch
 
@@ -68,8 +72,9 @@ class MainActivity : ComponentActivity() {
     ) { permissions ->
         val audioGranted = permissions[android.Manifest.permission.READ_MEDIA_AUDIO] ?: false
         val storageGranted = permissions[android.Manifest.permission.READ_EXTERNAL_STORAGE] ?: false
+        val writeStorageGranted = permissions[android.Manifest.permission.WRITE_EXTERNAL_STORAGE] ?: false
 
-        if (audioGranted || storageGranted) {
+        if (audioGranted || storageGranted || writeStorageGranted) {
             // Permiso otorgado, escanear archivos
             scanMusicFiles()
         } else {
@@ -77,16 +82,24 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(UnstableApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         AppModule.initialize(this)
-        val mediaViewModel: MediaViewModel = AppModule.provideMediaViewModel()
+        val mediaViewModel: MediaViewModel = AppModule.provideMediaViewModel();
+        val downloadViewModel: DownloadViewModel = AppModule.provideDownloadViewModel();
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            requestPermissions.launch(arrayOf(android.Manifest.permission.READ_MEDIA_AUDIO))
+            requestPermissions.launch(arrayOf(
+                android.Manifest.permission.READ_MEDIA_AUDIO,
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ))
         } else {
-            requestPermissions.launch(arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE))
+            requestPermissions.launch(arrayOf(
+                android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ))
         }
 
 
@@ -123,7 +136,8 @@ class MainActivity : ComponentActivity() {
                                 .background(MaterialTheme.colorScheme.primary)){
                             AppNavigation(Modifier,
                                 hostController = navController,
-                                mediaViewModel)
+                                mediaViewModel,
+                                downloadViewModel)
                         }
 
                     }
@@ -140,8 +154,9 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(UnstableApi::class)
 @Composable
-fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaViewModel: MediaViewModel){
+fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaViewModel: MediaViewModel, downloadViewModel: DownloadViewModel){
 
     NavHost(hostController, "home", modifier){
 
@@ -154,7 +169,7 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaVi
         }
 
         composable("search"){
-            SearchScreen()
+            DownloadScreen(downloadViewModel);
         }
 
 

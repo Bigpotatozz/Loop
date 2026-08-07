@@ -16,17 +16,22 @@ class FileScanner(
 ) {
 
 
-    suspend fun scanMusicFolder() {
+    suspend fun scanMusicFolder(context: Context) {
 
-        val musicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
+        val dir = File(
+            context.getExternalFilesDir(null),
+            "Music"
+        )
 
-        if (!musicDir.exists()) {
-            Log.e("FileScanner", "La carpeta de música no existe")
-            return
+        Log.d("FileScanner", "Escaneando carpeta: ${dir.absolutePath}")
+        Log.d("FileScanner", "Carpeta existe: ${dir.exists()}")
+
+        if (!dir.exists()) {
+            dir.mkdirs()
         }
-
-        scanDirectoryRecursive(musicDir)
+        scanDirectoryRecursive(dir);
     }
+
 
 
     private suspend fun scanDirectoryRecursive(directory: File) {
@@ -38,7 +43,7 @@ class FileScanner(
             } else if (file.extension.lowercase() in listOf("mp3", "m4a", "wav", "flac")) {
                 val song = extractMetaData(file)
                 if (song != null) {
-                    if(song.title != "Desconocido"){
+
                         val repeated = songDao.searchByPath(song.path);
 
                         if(repeated != null){
@@ -49,7 +54,7 @@ class FileScanner(
                         }
 
 
-                    }
+
                 }
             }
         }

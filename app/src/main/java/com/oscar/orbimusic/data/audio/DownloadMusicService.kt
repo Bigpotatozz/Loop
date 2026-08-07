@@ -12,30 +12,35 @@ import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.offline.DownloadService
 import com.oscar.orbimusic.R
+import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLException
 import com.yausername.youtubedl_android.YoutubeDLRequest
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.io.File
+import kotlin.math.log
 
 
 @UnstableApi
 class DownloadMusicService: Service() {
 
     //Inicializa el binder para que el viewModel se pueda conectar
-    private val binder =  DownloadServiceBinder();
+    private val binder =  DownloadServiceBinder()
     //Establece el hilo que se usara para las descargas, se usa SupervisorJob para que las otras acciones continuen apesar de que falle una previa
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO);
 
 
     // Es un callback que modificable donde se indicara que pasara cuando exista un error o se descargue una cancion correctamente
     private var downloadListener: ((DownloadProgress) -> Unit)? = null;
+
+    // Variable para rastrear el estado de la inicialización y evitar el error "instance not initialized"
+    private val isInitialized = CompletableDeferred<Boolean>()
 
     companion object {
         //Canal para la notificacion
@@ -44,6 +49,11 @@ class DownloadMusicService: Service() {
         private const val NOTIFICATION_ID = 2
     }
 
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannel();
+        initializeYtDL();
+    }
 
 
     private fun createNotificationChannel() {
@@ -64,10 +74,19 @@ class DownloadMusicService: Service() {
     private fun initializeYtDL(){
         scope.launch {
             try{
+                YoutubeDL.getInstance().init(applicationContext)
+                FFmpeg.getInstance().init(applicationContext)
+                // Se marca como inicializado después de init()
+                isInitialized.complete(true)
+
                 YoutubeDL.getInstance().updateYoutubeDL(this@DownloadMusicService)
-                Log.d("DownloadService", "YouTubeDL initialized")
+                Log.d("DownloadService", "YouTubeDL initialized and updated")
             }catch (e: YoutubeDLException){
-                Log.e("DownloadService", "Error initializing YouTubeDL", e)
+                Log.e("DownloadService", "$e", e)
+                if (!isInitialized.isCompleted) isInitialized.complete(false)
+            } catch (e: Exception) {
+                Log.e("DownloadService", "$e", e)
+                if (!isInitialized.isCompleted) isInitialized.complete(false)
             }
         }
     }
@@ -83,20 +102,31 @@ class DownloadMusicService: Service() {
         scope.launch {
 
             try {
+                // Espera a que la inicialización termine antes de continuar para evitar IllegalStateException
+                if (!isInitialized.await()) {
+                    throw Exception("YouTubeDL failed to initialize")
+                }
+
                 updateNotification("Descargando: $title", 0);
 
                 val musicDir = getMusicDirectory();
+                Log.d("DownloadService", "Descargando a: ${musicDir.absolutePath}");
 
                 val request = YoutubeDLRequest(youtubeUrl).apply {
                     addOption("-f", "bestaudio[ext=m4a]/best");
                     addOption("-x")
+                    addOption("--add-metadata")
+                    addOption("--embed-metadata")
                     addOption("-o", "${musicDir.absolutePath}/%(title)s.%(ext)s")
+
                 }
 
                 //Eejcuta la descarga
                 val result = YoutubeDL.getInstance().execute(request);
 
                 if (result.exitCode == 0){
+
+                    Log.d("DownloadService", "${result}")
                     updateNotification("Descarga completada: $title", 100);
                     downloadListener?.invoke(
                         DownloadProgress(
@@ -128,7 +158,7 @@ class DownloadMusicService: Service() {
     private fun getMusicDirectory(): File{
         val dir = File(
             getExternalFilesDir(null),
-            "Downloads/Music"
+            "Music"
         )
 
         if (!dir.exists()) {
@@ -139,7 +169,6 @@ class DownloadMusicService: Service() {
 
 
     private fun updateNotification(title: String, progress: Int){
-
         //Construye la notificacion
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("OrbiMusic - Descargas") // Título fijo

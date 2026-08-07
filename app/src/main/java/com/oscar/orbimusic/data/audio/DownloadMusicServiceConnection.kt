@@ -6,8 +6,9 @@ import android.os.IBinder
 import androidx.annotation.OptIn
 import androidx.media3.common.util.Log
 import androidx.media3.common.util.UnstableApi
-
-class DownloadMusicServiceConnection(private val callback: (DownloadMusicService) -> Unit): ServiceConnection {
+@UnstableApi
+class DownloadMusicServiceConnection
+    (private val callback: (DownloadMusicService) -> Unit): ServiceConnection {
 
 
     @OptIn(UnstableApi::class)

@@ -1,11 +1,14 @@
 package com.oscar.orbimusic.di
 
 import android.content.Context
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import com.oscar.orbimusic.data.audio.FileScanner
 import com.oscar.orbimusic.data.local.database.SongDao
 import com.oscar.orbimusic.data.local.database.SongDatabase
 import com.oscar.orbimusic.data.repository.SongRepositoryImpl
 import com.oscar.orbimusic.domain.repository.SongRepository
+import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
 
 object AppModule {
@@ -29,11 +32,16 @@ object AppModule {
 
     suspend fun scanMusicFiles(context: Context){
         val fileScanner = FileScanner(context, songDao);
-        fileScanner.scanMusicFolder()
+        fileScanner.scanMusicFolder(context)
     }
 
     fun provideMediaViewModel(): MediaViewModel {
         return MediaViewModel(songRepository, context);
+    }
+
+    @OptIn(UnstableApi::class)
+    fun provideDownloadViewModel(): DownloadViewModel{
+        return DownloadViewModel(context)
     }
 
 
