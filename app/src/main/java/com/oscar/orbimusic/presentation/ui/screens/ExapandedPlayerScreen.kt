@@ -3,6 +3,7 @@ package com.oscar.orbimusic.presentation.ui.screens
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FastForward
@@ -49,6 +51,7 @@ import com.oscar.orbimusic.presentation.ui.components.PastPrevMediaSong
 import com.oscar.orbimusic.presentation.utils.parseTime
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 
 
 /*playerState: PlayerState, mediaViewModel: MediaViewModel*/
@@ -118,13 +121,17 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             model = playerState.currentSong?.albumArtPath,
             contentDescription = playerState.currentSong?.title,
             modifier = Modifier.clip(RoundedCornerShape(25.dp)).size(290.dp),
+            contentScale = ContentScale.Crop
         )
 
         Spacer(Modifier.padding(5.dp))
 
 
+
+
         Text(
             playerState.currentSong?.title ?: "SIN TITULO",
+            Modifier.padding(horizontal = 30.dp).basicMarquee(),
             style = MaterialTheme.typography.labelLarge.copy(fontSize = 24.sp, color = Color.White),
             )
         Text(
@@ -231,6 +238,8 @@ fun NextSongComponent(mediaViewModel: MediaViewModel){
 
                 Column(Modifier.padding(start = 12.dp)) {
                         Text(nextSong?.title ?: "Sin titulo",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp),)
 
 

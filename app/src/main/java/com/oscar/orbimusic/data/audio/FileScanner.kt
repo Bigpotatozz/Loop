@@ -40,7 +40,7 @@ class FileScanner(
 
             if (file.isDirectory) {
                 scanDirectoryRecursive(file)
-            } else if (file.extension.lowercase() in listOf("mp3", "m4a", "wav", "flac")) {
+            } else if (file.extension.lowercase() in listOf("mp3", "m4a", "wav", "flac") && file.exists()) {
                 val song = extractMetaData(file)
                 if (song != null) {
 
@@ -93,7 +93,7 @@ class FileScanner(
                 Log.d("FileScanner", "Portada embebida guardada: $albumArtPath")
             } else {
                 // Si no hay portada embebida, busca jpg en la carpeta album_art
-                val albumArtDir = File(file.parent, "arthPath")
+                val albumArtDir = File(file.parent, "album_art")
                 val thumbnailFile = File(albumArtDir, "${file.nameWithoutExtension}.jpg") //Busca el archivo
 
                 //Si existe se lo asigna a la propiedad del objeto
@@ -128,7 +128,7 @@ class FileScanner(
     fun savePictureToFile(picture: ByteArray, songName: String): String?{
         return try{
 
-            val albumArtDir = File(context.cacheDir, "album_art");
+            val albumArtDir = File(context.cacheDir, "albumArth");
             if (!albumArtDir.exists()) {
                 albumArtDir.mkdirs()
             }

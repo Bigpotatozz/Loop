@@ -145,22 +145,22 @@ class DownloadMusicService: Service() {
                         val audioTitle = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE) //obtenemos el titulo
                         retriever.release(); //Ejecutamos la accion
 
-                        //Verifica si existe la carpeta de imagenes y si no la crea
-                        val arthPathDir = File(musicDir, "arthPath");
-                        if(!arthPathDir.exists()){
-                            arthPathDir.mkdirs(); //Crea la carpeta
+                        //Verifica si existe la carpeta de album_art y si no la crea
+                        val albumArtDir = File(musicDir, "arthPath");
+                        if(!albumArtDir.exists()){
+                            albumArtDir.mkdirs(); //Crea la carpeta
                         }
 
-                        //Si el titulo del archivo es diferente de null
-                        if(audioTitle != null){
-                            //Buscamos la imagen que inicialmente se guarda en MusicDir
-                            val artistImage = File(musicDir, "${audioTitle}.jpg");
-                            //Si existe
-                            if(artistImage.exists()){
-                                //declaramos la nueva ruta
-                                val newArtPath = File(arthPathDir, "${audioTitle}.jpg");
-                                artistImage.renameTo(newArtPath); //Movemos a la nueva ruta
-                            }
+                        //Buscar el jpg más reciente descargado (sin depender del nombre)
+                        val jpgFiles = musicDir.listFiles { file ->
+                            file.extension == "jpg"
+                        }?.sortedByDescending { it.lastModified() }
+
+                        if (!jpgFiles.isNullOrEmpty()) {
+                            val newestJpg = jpgFiles.first()
+                            val newPath = File(albumArtDir, newestJpg.name)
+                            newestJpg.renameTo(newPath)
+                            Log.d("DownloadService", "JPG movido a album_art: ${newestJpg.name}")
                         }
 
 

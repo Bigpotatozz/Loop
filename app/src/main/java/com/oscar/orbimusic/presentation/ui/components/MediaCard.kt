@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -87,7 +88,8 @@ fun MediaSongCard(
                 model = albumArt,
                 contentDescription = title,
                 modifier = if(isPlaying) Modifier.size(56.dp).clip(RoundedCornerShape(10.dp)).border(2.dp, MaterialTheme.colorScheme.secondary, RoundedCornerShape(10.dp))
-                else Modifier.size(56.dp).clip(RoundedCornerShape(10.dp))
+                else Modifier.size(56.dp).clip(RoundedCornerShape(10.dp)),
+                contentScale = ContentScale.Crop
             )
 
             Spacer(Modifier.width(12.dp))
