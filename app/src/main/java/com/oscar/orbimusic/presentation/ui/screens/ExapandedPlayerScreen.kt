@@ -42,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -120,9 +121,32 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 .fillMaxWidth()
                 .weight(1f)
         ) {
+            //Los degradados se pintan DENTRO del nodo de la imagen, para evitar
+            // que se pinte y despues de rato se degrade
             val artModifier = Modifier
                 .fillMaxSize()
                 .sharedPlayerElement(PlayerArtKey)
+                .drawWithContent {
+                    drawContent()
+
+                    //Velo superior, para que el chevron se lea sobre caratulas claras
+                    drawRect(
+                        Brush.verticalGradient(
+                            colors = listOf(background.copy(alpha = 0.55f), Color.Transparent),
+                            startY = 0f,
+                            endY = size.height * 0.18f
+                        )
+                    )
+
+                    //Funde el borde inferior con el fondo en vez de cortarlo en seco
+                    drawRect(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, background),
+                            startY = size.height * 0.6f,
+                            endY = size.height
+                        )
+                    )
+                }
 
             if (song?.albumArtPath == null) {
                 AlbumArtPlaceholder(
@@ -140,30 +164,6 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                     contentScale = ContentScale.Crop
                 )
             }
-
-            //Velo superior: sin el, el chevron se pierde sobre caratulas claras
-            Box(
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(background.copy(alpha = 0.55f), Color.Transparent)
-                        )
-                    )
-            )
-
-            //Degradado inferior: funde la imagen con el fondo en vez de cortarla en seco
-            Box(
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.4f)
-                    .background(
-                        Brush.verticalGradient(listOf(Color.Transparent, background))
-                    )
-            )
 
             //Cabecera flotando sobre la imagen
             Row(
