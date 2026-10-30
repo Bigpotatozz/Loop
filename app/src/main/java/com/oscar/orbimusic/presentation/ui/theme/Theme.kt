@@ -16,7 +16,10 @@ private val DarkColorScheme = darkColorScheme(
     secondary = Black,
     onSecondary = White,
     tertiary = GrayOrbi,
-    onTertiary = Black
+    onTertiary = Black,
+    onSurfaceVariant = InkMuted,
+    outline = Hairline,
+    surfaceVariant = SurfaceSoft
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -25,7 +28,10 @@ private val LightColorScheme = lightColorScheme(
     secondary = Black,
     onSecondary = White,
     tertiary = GrayOrbi,
-    onTertiary = Black
+    onTertiary = Black,
+    onSurfaceVariant = InkMuted,
+    outline = Hairline,
+    surfaceVariant = SurfaceSoft
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
