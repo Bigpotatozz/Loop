@@ -93,7 +93,7 @@ class FileScanner(
                 Log.d("FileScanner", "Portada embebida guardada: $albumArtPath")
             } else {
                 // Si no hay portada embebida, busca jpg en la carpeta album_art
-                val albumArtDir = File(file.parent, "album_art")
+                val albumArtDir = File(file.parent, "arthPath")
                 val thumbnailFile = File(albumArtDir, "${file.nameWithoutExtension}.jpg") //Busca el archivo
 
                 //Si existe se lo asigna a la propiedad del objeto
