@@ -22,14 +22,14 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -178,7 +178,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 PlayerIconButton(
-                    icon = Icons.Filled.KeyboardArrowDown,
+                    icon = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = "Cerrar",
                     iconSize = 26.dp,
                     tint = playerInk,
@@ -186,7 +186,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 )
 
                 PlayerIconButton(
-                    icon = Icons.Filled.FavoriteBorder,
+                    icon = Icons.Rounded.FavoriteBorder,
                     contentDescription = "Añadir a favoritos",
                     iconSize = 22.dp,
                     tint = playerInk,
@@ -293,7 +293,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             verticalAlignment = Alignment.CenterVertically
         ) {
             PlayerIconButton(
-                icon = Icons.Filled.Shuffle,
+                icon = Icons.Rounded.Shuffle,
                 contentDescription = if (shuffle) "Desactivar aleatorio" else "Activar aleatorio",
                 iconSize = 22.dp,
                 tint = if (shuffle) playerInk else playerInk.copy(alpha = 0.4f),
@@ -301,7 +301,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             )
 
             PlayerIconButton(
-                icon = Icons.Filled.SkipPrevious,
+                icon = Icons.Rounded.SkipPrevious,
                 contentDescription = "Canción anterior",
                 iconSize = 32.dp,
                 tint = playerInk,
@@ -318,7 +318,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (playerState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    imageVector = if (playerState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = if (playerState.isPlaying) "Pausar" else "Reproducir",
                     modifier = Modifier.size(28.dp),
                     tint = background
@@ -326,7 +326,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             }
 
             PlayerIconButton(
-                icon = Icons.Filled.SkipNext,
+                icon = Icons.Rounded.SkipNext,
                 contentDescription = "Siguiente canción",
                 iconSize = 32.dp,
                 tint = playerInk,
@@ -334,7 +334,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             )
 
             PlayerIconButton(
-                icon = Icons.Filled.Repeat,
+                icon = Icons.Rounded.Repeat,
                 contentDescription = if (repeat) "Desactivar repetición" else "Repetir canción",
                 iconSize = 22.dp,
                 tint = if (repeat) playerInk else playerInk.copy(alpha = 0.4f),

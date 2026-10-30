@@ -16,10 +16,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -158,7 +158,7 @@ private fun MiniPlayerContent(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            MiniPlayerIconButton(Icons.Filled.SkipPrevious, "Canción anterior", onPrevious)
+            MiniPlayerIconButton(Icons.Rounded.SkipPrevious, "Canción anterior", onPrevious)
 
             //Unico elemento relleno de la barra: ahi se concentra el peso visual
             Box(
@@ -176,7 +176,7 @@ private fun MiniPlayerContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                         contentDescription = if (isPlaying) "Pausar" else "Reproducir",
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.secondary
@@ -184,7 +184,7 @@ private fun MiniPlayerContent(
                 }
             }
 
-            MiniPlayerIconButton(Icons.Filled.SkipNext, "Siguiente canción", onNext)
+            MiniPlayerIconButton(Icons.Rounded.SkipNext, "Siguiente canción", onNext)
         }
     }
 }

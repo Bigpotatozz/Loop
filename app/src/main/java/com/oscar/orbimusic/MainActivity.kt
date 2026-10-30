@@ -28,9 +28,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.Scaffold
@@ -226,8 +226,8 @@ fun Navbar(navController: NavController){
     var selectedItem by rememberSaveable{ mutableStateOf(0) }
 
     val items = listOf("Home", "Media", "Search");
-    val selectedIcons = listOf(Icons.Filled.Home, Icons.Filled.Album, Icons.Filled.Search);
-    val unselectedIcons = listOf(Icons.Filled.Home, Icons.Filled.Album, Icons.Filled.Search);
+    val selectedIcons = listOf(Icons.Rounded.Home, Icons.Rounded.Album, Icons.Rounded.Search);
+    val unselectedIcons = listOf(Icons.Rounded.Home, Icons.Rounded.Album, Icons.Rounded.Search);
 
 
 
