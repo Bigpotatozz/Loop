@@ -58,6 +58,8 @@ import com.oscar.orbimusic.presentation.ui.animations.PlayerArtKey
 import com.oscar.orbimusic.presentation.ui.animations.PlayerContainerKey
 import com.oscar.orbimusic.presentation.ui.animations.PlayerTitleKey
 import com.oscar.orbimusic.presentation.ui.components.AlbumArtPlaceholder
+import com.oscar.orbimusic.presentation.ui.theme.PlayerInk
+import com.oscar.orbimusic.presentation.ui.theme.PlayerSurface
 import com.oscar.orbimusic.presentation.ui.animations.sharedPlayerBounds
 import com.oscar.orbimusic.presentation.ui.animations.sharedPlayerElement
 import com.oscar.orbimusic.presentation.utils.parseTime
@@ -103,9 +105,10 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
     val song = playerState.currentSong
     val duration = song?.duration ?: 0L
 
-    val onSecondary = MaterialTheme.colorScheme.onSecondary
-
-    val background = MaterialTheme.colorScheme.secondary
+    //El expandido no sigue al tema: es oscuro en claro y en oscuro. La caratula
+  
+    val playerInk = PlayerInk
+    val background = PlayerSurface
 
     Column(
         Modifier
@@ -152,8 +155,8 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 AlbumArtPlaceholder(
                     title = song?.title ?: "?",
                     modifier = artModifier,
-                    background = onSecondary.copy(alpha = 0.12f),
-                    contentColor = onSecondary.copy(alpha = 0.7f),
+                    background = playerInk.copy(alpha = 0.12f),
+                    contentColor = playerInk.copy(alpha = 0.7f),
                     fontSize = 140.sp
                 )
             } else {
@@ -178,7 +181,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                     icon = Icons.Filled.KeyboardArrowDown,
                     contentDescription = "Cerrar",
                     iconSize = 26.dp,
-                    tint = onSecondary,
+                    tint = playerInk,
                     onClick = { mediaViewModel.setExpanded(false) }
                 )
 
@@ -186,7 +189,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                     icon = Icons.Filled.FavoriteBorder,
                     contentDescription = "Añadir a favoritos",
                     iconSize = 22.dp,
-                    tint = onSecondary,
+                    tint = playerInk,
                     // TODO: Agregar a favoritos
                     onClick = { }
                 )
@@ -206,7 +209,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = (-0.5).sp
             ),
-            color = onSecondary,
+            color = playerInk,
             maxLines = 1
         )
 
@@ -216,7 +219,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             text = song?.artist ?: "Sin artista",
             modifier = Modifier.padding(horizontal = 24.dp),
             style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
-            color = onSecondary.copy(alpha = 0.6f),
+            color = playerInk.copy(alpha = 0.6f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -244,7 +247,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                     Modifier
                         .size(width = 4.dp, height = 20.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(onSecondary)
+                        .background(playerInk)
                 )
             },
             track = { sliderState ->
@@ -254,14 +257,14 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                         .height(8.dp)
                         .clip(RoundedCornerShape(10.dp)),
                     colors = SliderDefaults.colors(
-                        activeTrackColor = onSecondary,
-                        inactiveTrackColor = onSecondary.copy(alpha = 0.25f)
+                        activeTrackColor = playerInk,
+                        inactiveTrackColor = playerInk.copy(alpha = 0.25f)
                     )
                 )
             },
             colors = SliderDefaults.colors(
-                activeTrackColor = onSecondary,
-                inactiveTrackColor = onSecondary.copy(alpha = 0.25f)
+                activeTrackColor = playerInk,
+                inactiveTrackColor = playerInk.copy(alpha = 0.25f)
             )
         )
 
@@ -272,12 +275,12 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             Text(
                 text = parseTime(currentPosition),
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                color = onSecondary.copy(alpha = 0.6f)
+                color = playerInk.copy(alpha = 0.6f)
             )
             Text(
                 text = parseTime(duration),
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                color = onSecondary.copy(alpha = 0.6f)
+                color = playerInk.copy(alpha = 0.6f)
             )
         }
 
@@ -293,7 +296,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 icon = Icons.Filled.Shuffle,
                 contentDescription = if (shuffle) "Desactivar aleatorio" else "Activar aleatorio",
                 iconSize = 22.dp,
-                tint = if (shuffle) onSecondary else onSecondary.copy(alpha = 0.4f),
+                tint = if (shuffle) playerInk else playerInk.copy(alpha = 0.4f),
                 onClick = { mediaViewModel.setShuffle(!shuffle) }
             )
 
@@ -301,7 +304,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 icon = Icons.Filled.SkipPrevious,
                 contentDescription = "Canción anterior",
                 iconSize = 32.dp,
-                tint = onSecondary,
+                tint = playerInk,
                 onClick = { mediaViewModel.playPrevious() }
             )
 
@@ -310,7 +313,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 Modifier
                     .size(64.dp)
                     .clip(CircleShape)
-                    .background(onSecondary)
+                    .background(playerInk)
                     .clickable(onClick = { mediaViewModel.togglePlayPause() }),
                 contentAlignment = Alignment.Center
             ) {
@@ -318,7 +321,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                     imageVector = if (playerState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (playerState.isPlaying) "Pausar" else "Reproducir",
                     modifier = Modifier.size(28.dp),
-                    tint = MaterialTheme.colorScheme.secondary
+                    tint = background
                 )
             }
 
@@ -326,7 +329,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 icon = Icons.Filled.SkipNext,
                 contentDescription = "Siguiente canción",
                 iconSize = 32.dp,
-                tint = onSecondary,
+                tint = playerInk,
                 onClick = { mediaViewModel.playNext() }
             )
 
@@ -334,7 +337,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 icon = Icons.Filled.Repeat,
                 contentDescription = if (repeat) "Desactivar repetición" else "Repetir canción",
                 iconSize = 22.dp,
-                tint = if (repeat) onSecondary else onSecondary.copy(alpha = 0.4f),
+                tint = if (repeat) playerInk else playerInk.copy(alpha = 0.4f),
                 onClick = { mediaViewModel.setRepeat(!repeat) }
             )
         }
@@ -354,17 +357,17 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             Text(
                 text = "Sigue",
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                color = onSecondary.copy(alpha = 0.5f)
+                color = playerInk.copy(alpha = 0.5f)
             )
             Text(
                 text = "  ·  ",
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                color = onSecondary.copy(alpha = 0.3f)
+                color = playerInk.copy(alpha = 0.3f)
             )
             Text(
                 text = nextSong?.title ?: "Fin de la cola",
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                color = if (nextSong != null) onSecondary else onSecondary.copy(alpha = 0.5f),
+                color = if (nextSong != null) playerInk else playerInk.copy(alpha = 0.5f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

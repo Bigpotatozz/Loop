@@ -1,5 +1,6 @@
 package com.oscar.orbimusic.presentation.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -189,7 +190,8 @@ private fun MiniPlayerContent(
 }
 
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Preview(name = "Claro", showBackground = true)
+@Preview(name = "Oscuro", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun MiniPlayerContentPreview(){
     OrbiMusicTheme {

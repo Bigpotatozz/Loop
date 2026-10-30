@@ -11,6 +11,7 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -103,14 +104,16 @@ class MainActivity : ComponentActivity() {
 
 
 
+        //auto() elige el velo segun el modo del sistema. El primer color es para
+        //tema claro y el segundo para oscuro, y deben casar con el terciario.
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(
-                android.graphics.Color.BLACK,
-                android.graphics.Color.WHITE
+            statusBarStyle = SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
             ),
-            navigationBarStyle = SystemBarStyle.light(
-                android.graphics.Color.parseColor("#D9D9D9"), // Fondo gris abajo (tu terciario)
-                android.graphics.Color.parseColor("#D9D9D9")
+            navigationBarStyle = SystemBarStyle.auto(
+                android.graphics.Color.parseColor("#D9D9D9"), // terciario claro
+                android.graphics.Color.parseColor("#1C1C1E")  // terciario oscuro
             )
         )
         setContent {
@@ -120,11 +123,11 @@ class MainActivity : ComponentActivity() {
 
             // Es la view o variable que almacena toda la activity
             val view = LocalView.current
-            LaunchedEffect(isExpanded) {
-                //Accede a los insets de la ventana y les establece un color claro o obscuro dependiento de el expanded 
-                //(los insets son los iconos de la barra notificaciones y todo eso)
-                WindowCompat.getInsetsController(window, view)
-                    .isAppearanceLightStatusBars = !isExpanded
+            val darkTheme = isSystemInDarkTheme()
+            LaunchedEffect(isExpanded, darkTheme) {
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.isAppearanceLightStatusBars = !isExpanded && !darkTheme
+                controller.isAppearanceLightNavigationBars = !darkTheme
             }
 
             OrbiMusicTheme {

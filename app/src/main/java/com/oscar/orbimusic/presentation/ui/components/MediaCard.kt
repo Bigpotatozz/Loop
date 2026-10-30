@@ -1,5 +1,6 @@
 package com.oscar.orbimusic.presentation.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -180,7 +181,8 @@ fun MediaSongCard(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
+@Preview(name = "Claro", showBackground = true, showSystemUi = true)
+@Preview(name = "Oscuro", showBackground = true, showSystemUi = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun MediaSongCardPreview() {
     OrbiMusicTheme {
