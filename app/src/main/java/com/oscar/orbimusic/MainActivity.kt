@@ -125,7 +125,7 @@ class MainActivity : ComponentActivity() {
                 //(los insets son los iconos de la barra notificaciones y todo eso)
                 WindowCompat.getInsetsController(window, view)
                     .isAppearanceLightStatusBars = !isExpanded
-    
+            }
 
             OrbiMusicTheme {
 
@@ -174,7 +174,7 @@ class MainActivity : ComponentActivity() {
                                         mediaViewModel.setExpanded(false)
                                     }
                                     
-                                    Componente expandedPlayer, recibe el playerState y su respectivo viewModel
+                                    //Componente expandedPlayer, recibe el playerState y su respectivo viewModel
                                     ExpandedPlayerScreen(playerState, mediaViewModel)
                                 }
                             }
