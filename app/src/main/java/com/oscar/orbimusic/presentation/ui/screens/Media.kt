@@ -1,12 +1,9 @@
 package com.oscar.orbimusic.presentation.ui.screens
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,6 +24,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -38,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.oscar.orbimusic.presentation.ui.animations.LocalPlayerAnimatedScope
 import com.oscar.orbimusic.presentation.ui.components.MediaSongCard
 import com.oscar.orbimusic.presentation.ui.components.PrevMediaSong
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
@@ -89,18 +88,7 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
     //0 = nombre, 1 = artista, 2 = recientes
     var selectedFilter by rememberSaveable { mutableIntStateOf(2) }
 
-    AnimatedContent(
-        targetState = isExpanded,
-        label = "song_expanded",
-        transitionSpec = {
-            slideInVertically(initialOffsetY = { it }) + fadeIn() togetherWith
-            slideOutVertically(targetOffsetY = { it }) + fadeOut()
-        }
-    ) { expanded ->
-
-        if(!expanded){
-
-            Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize()) {
 
                 Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp, bottom = 16.dp)) {
 
@@ -160,42 +148,22 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                     }
                 }
 
-                AnimatedVisibility(
-                    visible = playerState.currentSong != null,
-                    // Efecto de entrada: Aparece desde abajo (300ms) con fundido
-                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                    // Efecto de salida: Se desliza hacia abajo con fundido
-                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-                ) {
-                    Box(Modifier
-                        .padding(5.dp)
-                        .clip(
-                            RoundedCornerShape(
-                                topStart = 20.dp,
-                                topEnd = 20.dp,
-                                bottomStart = 20.dp,
-                                bottomEnd = 20.dp
-                            )
-                        ).clickable(onClick = {
-                            mediaViewModel.setExpanded(true);
-                        })){
-                        PrevMediaSong(playerState, mediaViewModel)
-                    }
-
+        //La barrita se esconde al expandir: este AnimatedVisibility es el que
+        AnimatedVisibility(
+            visible = playerState.currentSong != null && !isExpanded,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = fadeOut()
+        ) {
+            CompositionLocalProvider(LocalPlayerAnimatedScope provides this) {
+                Box(Modifier
+                    .padding(5.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .clickable(onClick = {
+                        mediaViewModel.setExpanded(true);
+                    })){
+                    PrevMediaSong(playerState, mediaViewModel)
                 }
             }
-
-
-        }else{
-
-
-            Column() {
-                ExpandedPlayerScreen(playerState, mediaViewModel);
-            }
-
         }
-
     }
-
-
 }

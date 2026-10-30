@@ -3,9 +3,22 @@ package com.oscar.orbimusic
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContract
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import com.oscar.orbimusic.presentation.ui.animations.LocalPlayerAnimatedScope
+import com.oscar.orbimusic.presentation.ui.animations.LocalSharedTransitionScope
+import com.oscar.orbimusic.presentation.ui.screens.ExpandedPlayerScreen
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
@@ -17,12 +30,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,34 +41,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.oscar.orbimusic.presentation.ui.screens.HomeScreen
 import com.oscar.orbimusic.presentation.ui.screens.MediaScreen
-import com.oscar.orbimusic.presentation.ui.screens.SearchScreen
 import com.oscar.orbimusic.presentation.ui.theme.OrbiMusicTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
-import org.w3c.dom.Text
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.util.UnstableApi
-import androidx.navigation.compose.rememberNavController
 import com.oscar.orbimusic.di.AppModule
 import com.oscar.orbimusic.presentation.ui.screens.DownloadScreen
 import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
@@ -82,7 +81,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @OptIn(UnstableApi::class)
+    @OptIn(UnstableApi::class, ExperimentalSharedTransitionApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -116,32 +115,71 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             val navController = rememberNavController();
+            val isExpanded by mediaViewModel.isExpanded.collectAsState()
+            val playerState by mediaViewModel.playerState.collectAsState()
+
+            // Es la view o variable que almacena toda la activity
+            val view = LocalView.current
+            LaunchedEffect(isExpanded) {
+                //Accede a los insets de la ventana y les establece un color claro o obscuro dependiento de el expanded 
+                //(los insets son los iconos de la barra notificaciones y todo eso)
+                WindowCompat.getInsetsController(window, view)
+                    .isAppearanceLightStatusBars = !isExpanded
+    
+
             OrbiMusicTheme {
-                Scaffold(modifier = Modifier.fillMaxSize(),
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    bottomBar = {
-                    Navbar(navController)
-                }) { innerPadding ->
 
-                    Box(Modifier.fillMaxSize()
-                        .padding(innerPadding)
-                        .background(MaterialTheme.colorScheme.tertiary)){
 
-                        Box(Modifier.clip(RoundedCornerShape(
-                                    topStart = 0.dp,
-                                    topEnd = 0.dp,
-                                    bottomStart = 25.dp,
-                                    bottomEnd = 25.dp
-                                ))
-                                .background(MaterialTheme.colorScheme.primary)){
-                            AppNavigation(Modifier,
-                                hostController = navController,
-                                mediaViewModel,
-                                downloadViewModel)
+                //Es una caja que me da herramientas para animacion y las ejecuta
+                SharedTransitionLayout {
+                    //Accede y guarda un valor al que van a poder acceder todos sus hijos
+                    CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+                        Box(Modifier.fillMaxSize()) {
+
+                            Scaffold(modifier = Modifier.fillMaxSize(),
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                bottomBar = {
+                                Navbar(navController)
+                            }) { innerPadding ->
+
+                                Box(Modifier.fillMaxSize()
+                                    .padding(innerPadding)
+                                    .background(MaterialTheme.colorScheme.tertiary)){
+
+                                    Box(Modifier.clip(RoundedCornerShape(
+                                                topStart = 0.dp,
+                                                topEnd = 0.dp,
+                                                bottomStart = 25.dp,
+                                                bottomEnd = 25.dp
+                                            ))
+                                            .background(MaterialTheme.colorScheme.primary)){
+                                        AppNavigation(Modifier,
+                                            hostController = navController,
+                                            mediaViewModel,
+                                            downloadViewModel)
+                                    }
+
+                                }
+
+                            }
+                            //Muestra u oculta la animacion
+                            AnimatedVisibility(
+                                visible = isExpanded,
+                                enter = fadeIn(),
+                                exit = fadeOut()
+                            ) {
+                                CompositionLocalProvider(LocalPlayerAnimatedScope provides this) {
+                                    //Si es expanded el boton hacia atras simplemente pone el expanded en false
+                                    BackHandler(enabled = isExpanded) {
+                                        mediaViewModel.setExpanded(false)
+                                    }
+                                    
+                                    Componente expandedPlayer, recibe el playerState y su respectivo viewModel
+                                    ExpandedPlayerScreen(playerState, mediaViewModel)
+                                }
+                            }
                         }
-
                     }
-
                 }
             }
         }
@@ -201,7 +239,7 @@ fun Navbar(navController: NavController){
                 selected = selectedItem == index,
                 onClick = {
                     selectedItem = index
-                    navController.navigate(item)
+                    navController.navigate(item.lowercase())
                 },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.onPrimary,

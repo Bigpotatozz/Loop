@@ -1,35 +1,40 @@
 package com.oscar.orbimusic.presentation.ui.screens
 
-import android.annotation.SuppressLint
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.QueueMusic
-import androidx.compose.material.icons.filled.QueuePlayNext
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -37,227 +42,300 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.oscar.orbimusic.R
 import com.oscar.orbimusic.domain.model.PlayerState
-import com.oscar.orbimusic.presentation.ui.components.PastPrevMediaSong
+import com.oscar.orbimusic.presentation.ui.animations.PlayerArtKey
+import com.oscar.orbimusic.presentation.ui.animations.PlayerContainerKey
+import com.oscar.orbimusic.presentation.ui.animations.PlayerTitleKey
+import com.oscar.orbimusic.presentation.ui.components.AlbumArtPlaceholder
+import com.oscar.orbimusic.presentation.ui.animations.sharedPlayerBounds
+import com.oscar.orbimusic.presentation.ui.animations.sharedPlayerElement
 import com.oscar.orbimusic.presentation.utils.parseTime
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
 
 
-/*playerState: PlayerState, mediaViewModel: MediaViewModel*/
+//Boton circular con area de toque accesible. El del mini-player esta fijado a 44/24dp
+//y vive en otro archivo, asi que aqui lleva sus propias medidas.
+@Composable
+private fun PlayerIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    iconSize: Dp,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Box(
+        Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(iconSize),
+            tint = tint
+        )
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewModel){
 
-    val currentPositionSong by mediaViewModel.currentPosition.collectAsState();
-
-
-    Column(modifier = Modifier.fillMaxSize()
-        .padding(8.dp)
-        .clip(RoundedCornerShape(25.dp))
-        .background(Color.Black),
-        horizontalAlignment = Alignment.CenterHorizontally,) {
-
-        Row(Modifier.padding(start = 20.dp, top = 15.dp, bottom = 15.dp, end = 20.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-
-
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(100))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                    .padding(6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.KeyboardArrowDown,
-                    contentDescription = "Cerrar",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp).clickable(onClick = {
-                        mediaViewModel.setExpanded(false);
-                    })
-                )
-            }
-
-
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                ModeIndicator(mediaViewModel = mediaViewModel)
-            }
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(100))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                    .padding(6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.FavoriteBorder,
-                    contentDescription = "Favorito",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp).clickable(onClick = {
-                        // TODO: Agregar a favoritos
-                    })
-                )
-            }
-        }
-
-        Spacer(Modifier.padding(10.dp))
-
-
-
-
-
-        AsyncImage(
-            model = playerState.currentSong?.albumArtPath,
-            contentDescription = playerState.currentSong?.title,
-            modifier = Modifier.clip(RoundedCornerShape(25.dp)).size(290.dp),
-            contentScale = ContentScale.Crop
-        )
-
-        Spacer(Modifier.padding(5.dp))
-
-
-
-
-        Text(
-            playerState.currentSong?.title ?: "SIN TITULO",
-            Modifier.padding(horizontal = 30.dp).basicMarquee(),
-            style = MaterialTheme.typography.labelLarge.copy(fontSize = 24.sp, color = Color.White),
-            )
-        Text(
-            playerState.currentSong?.artist ?: "SIN ARTISTA",
-            style = MaterialTheme.typography.headlineSmall.copy(fontSize = 18.sp, color = Color.Gray))
-
-
-        Row(Modifier) {
-            PastPrevMediaSong(
-                playerState,
-                mediaViewModel,
-                playerState.currentSong!!.duration,
-                currentPositionSong,
-                parseTime = {
-                    parseTime(playerState.currentSong.duration)
-                }
-            )
-        }
-
-
-        Box(Modifier.padding(15.dp)){
-            NextSongComponent(mediaViewModel)
-        }
-
-    }
-
-}
-
-
-
-@Composable
-fun ModeIndicator(mediaViewModel: MediaViewModel) {
+    val currentPosition by mediaViewModel.currentPosition.collectAsState()
     val shuffle by mediaViewModel.shuffle.collectAsState()
     val repeat by mediaViewModel.repeat.collectAsState()
+    val nextSong by mediaViewModel.nextSong.collectAsState()
 
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
+    val song = playerState.currentSong
+    val duration = song?.duration ?: 0L
+
+    val onSecondary = MaterialTheme.colorScheme.onSecondary
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .sharedPlayerBounds(PlayerContainerKey)
+            .background(MaterialTheme.colorScheme.secondary)
+            .windowInsetsPadding(WindowInsets.systemBars)
+            .padding(horizontal = 24.dp)
     ) {
-        when {
-            shuffle -> {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Shuffle,
-                        contentDescription = "Shuffle activo",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.padding(4.dp))
-                    Text(
-                        "Shuffle",
-                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary),
-                    )
-                }
-            }
-            repeat -> {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Repeat,
-                        contentDescription = "Repeat activo",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.padding(4.dp))
-                    Text(
-                        "Repeat",
-                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary),
-                    )
-                }
-            }
-            else -> {
-                Text(
-                    "Normal",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-                    ),
+
+        //Cabecera
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            PlayerIconButton(
+                icon = Icons.Filled.KeyboardArrowDown,
+                contentDescription = "Cerrar",
+                iconSize = 26.dp,
+                tint = onSecondary,
+                onClick = { mediaViewModel.setExpanded(false) }
+            )
+
+            PlayerIconButton(
+                icon = Icons.Filled.FavoriteBorder,
+                contentDescription = "Añadir a favoritos",
+                iconSize = 22.dp,
+                tint = onSecondary,
+                // TODO: Agregar a favoritos
+                onClick = { }
+            )
+        }
+
+        //Caratula: cede alto en pantallas bajas en vez de cortar lo de abajo
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(vertical = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val artModifier = Modifier
+                .widthIn(max = 360.dp)
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .sharedPlayerElement(PlayerArtKey)
+                .clip(RoundedCornerShape(20.dp))
+
+            if (song?.albumArtPath == null) {
+                AlbumArtPlaceholder(
+                    title = song?.title ?: "?",
+                    modifier = artModifier,
+                    background = onSecondary.copy(alpha = 0.12f),
+                    contentColor = onSecondary.copy(alpha = 0.7f),
+                    fontSize = 96.sp
+                )
+            } else {
+                AsyncImage(
+                    model = song.albumArtPath,
+                    contentDescription = song.title,
+                    modifier = artModifier,
+                    contentScale = ContentScale.Crop
                 )
             }
         }
-    }
-}
 
+        //Titulo y artista
+        Text(
+            text = song?.title ?: "Sin título",
+            modifier = Modifier
+                .fillMaxWidth()
+                .sharedPlayerBounds(PlayerTitleKey)
+                .basicMarquee(),
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontSize = 28.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.5).sp
+            ),
+            color = onSecondary,
+            maxLines = 1
+        )
 
-@SuppressLint("SuspiciousIndentation")
-@Composable
-fun NextSongComponent(mediaViewModel: MediaViewModel){
-    val nextSong by mediaViewModel.nextSong.collectAsState();
+        Spacer(Modifier.height(4.dp))
 
-        Row(Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(15.dp))
-            .background(MaterialTheme.colorScheme.primary),
-            verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = song?.artist ?: "Sin artista",
+            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+            color = onSecondary.copy(alpha = 0.6f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
 
-            Row(Modifier.weight(0.7f).padding(5.dp),
-                verticalAlignment = Alignment.CenterVertically){
-                AsyncImage(model = nextSong?.albumArtPath,
-                    contentDescription = "Imagen de album",
-                    Modifier.clip(RoundedCornerShape(15.dp)).size(60.dp),
-                    contentScale = ContentScale.Crop,)
+        Spacer(Modifier.height(24.dp))
 
+        //Progreso
+        Slider(
+            value = if (duration > 0) currentPosition.toFloat() else 0f,
+            onValueChange = { mediaViewModel.seekTo(it.toLong()) },
+            valueRange = 0f..if (duration > 0) duration.toFloat() else 1f,
+            modifier = Modifier.fillMaxWidth(),
+            thumb = {
+                Box(
+                    Modifier
+                        .size(width = 4.dp, height = 20.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(onSecondary)
+                )
+            },
+            track = { sliderState ->
+                SliderDefaults.Track(
+                    sliderState = sliderState,
+                    modifier = Modifier
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(10.dp)),
+                    colors = SliderDefaults.colors(
+                        activeTrackColor = onSecondary,
+                        inactiveTrackColor = onSecondary.copy(alpha = 0.25f)
+                    )
+                )
+            },
+            colors = SliderDefaults.colors(
+                activeTrackColor = onSecondary,
+                inactiveTrackColor = onSecondary.copy(alpha = 0.25f)
+            )
+        )
 
-                Column(Modifier.padding(start = 12.dp)) {
-                        Text(nextSong?.title ?: "Sin titulo",
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp),)
-
-
-                    Text(nextSong?.artist ?: "Sin artista",
-                        style = MaterialTheme.typography.titleSmall.copy(fontSize = 10.sp, color = Color.Gray),)
-                }
-            }
-
-            Icon( imageVector = Icons.Filled.QueuePlayNext,
-                contentDescription = "next",
-                modifier = Modifier.size(30.dp)
-                    .weight(0.3f)
-                    .clickable(onClick = {
-                    mediaViewModel.playNextNoShuffle()
-                }))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = parseTime(currentPosition),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = onSecondary.copy(alpha = 0.6f)
+            )
+            Text(
+                text = parseTime(duration),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = onSecondary.copy(alpha = 0.6f)
+            )
         }
 
+        Spacer(Modifier.height(20.dp))
+
+        //Controles
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            PlayerIconButton(
+                icon = Icons.Filled.Shuffle,
+                contentDescription = if (shuffle) "Desactivar aleatorio" else "Activar aleatorio",
+                iconSize = 22.dp,
+                tint = if (shuffle) onSecondary else onSecondary.copy(alpha = 0.4f),
+                onClick = { mediaViewModel.setShuffle(!shuffle) }
+            )
+
+            PlayerIconButton(
+                icon = Icons.Filled.SkipPrevious,
+                contentDescription = "Canción anterior",
+                iconSize = 32.dp,
+                tint = onSecondary,
+                onClick = { mediaViewModel.playPrevious() }
+            )
+
+            //Unico elemento relleno: el peso visual de la pantalla
+            Box(
+                Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(onSecondary)
+                    .clickable(onClick = { mediaViewModel.togglePlayPause() }),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (playerState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (playerState.isPlaying) "Pausar" else "Reproducir",
+                    modifier = Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+
+            PlayerIconButton(
+                icon = Icons.Filled.SkipNext,
+                contentDescription = "Siguiente canción",
+                iconSize = 32.dp,
+                tint = onSecondary,
+                onClick = { mediaViewModel.playNext() }
+            )
+
+            PlayerIconButton(
+                icon = Icons.Filled.Repeat,
+                contentDescription = if (repeat) "Desactivar repetición" else "Repetir canción",
+                iconSize = 22.dp,
+                tint = if (repeat) onSecondary else onSecondary.copy(alpha = 0.4f),
+                onClick = { mediaViewModel.setRepeat(!repeat) }
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        //Siguiente en la cola: una linea, no una tarjeta
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(enabled = nextSong != null) { mediaViewModel.playNextNoShuffle() }
+                .padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Sigue",
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                color = onSecondary.copy(alpha = 0.5f)
+            )
+            Text(
+                text = "  ·  ",
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                color = onSecondary.copy(alpha = 0.3f)
+            )
+            Text(
+                text = nextSong?.title ?: "Fin de la cola",
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                color = if (nextSong != null) onSecondary else onSecondary.copy(alpha = 0.5f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
     }
-
-
-
+}
