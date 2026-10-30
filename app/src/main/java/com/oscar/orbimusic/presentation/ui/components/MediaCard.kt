@@ -33,6 +33,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -71,20 +72,27 @@ fun EqualizerAnimation(isPlaying: Boolean) {
     }
 }
 
-//Cuadro que sustituye a la caratula cuando la cancion no tiene imagen
+//Cuadro que sustituye a la caratula cuando la cancion no tiene imagen.
+//Los colores son parametros porque tambien se usa sobre el fondo negro del mini-player
 @Composable
-private fun AlbumArtPlaceholder(title: String, modifier: Modifier = Modifier) {
+fun AlbumArtPlaceholder(
+    title: String,
+    modifier: Modifier = Modifier,
+    background: Color = MaterialTheme.colorScheme.outline,
+    contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    fontSize: TextUnit = 22.sp
+) {
     Box(
-        modifier.background(MaterialTheme.colorScheme.outline),
+        modifier.background(background),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = title.trim().take(1).uppercase(),
             style = MaterialTheme.typography.titleLarge.copy(
-                fontSize = 22.sp,
+                fontSize = fontSize,
                 fontWeight = FontWeight.SemiBold
             ),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = contentColor
         )
     }
 }
