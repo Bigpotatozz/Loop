@@ -9,15 +9,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -103,55 +104,25 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
 
     val onSecondary = MaterialTheme.colorScheme.onSecondary
 
+    val background = MaterialTheme.colorScheme.secondary
+
     Column(
         Modifier
             .fillMaxSize()
             .sharedPlayerBounds(PlayerContainerKey, corner = 0.dp, cornerOther = 12.dp)
-            .background(MaterialTheme.colorScheme.secondary)
-            .windowInsetsPadding(WindowInsets.systemBars)
-            .padding(horizontal = 24.dp)
+            .background(background)
     ) {
 
-        //Cabecera
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            PlayerIconButton(
-                icon = Icons.Filled.KeyboardArrowDown,
-                contentDescription = "Cerrar",
-                iconSize = 26.dp,
-                tint = onSecondary,
-                onClick = { mediaViewModel.setExpanded(false) }
-            )
-
-            PlayerIconButton(
-                icon = Icons.Filled.FavoriteBorder,
-                contentDescription = "Añadir a favoritos",
-                iconSize = 22.dp,
-                tint = onSecondary,
-                // TODO: Agregar a favoritos
-                onClick = { }
-            )
-        }
-
-        //Caratula: cede alto en pantallas bajas en vez de cortar lo de abajo
+        //Caratula a sangre: sin padding, pega con el borde superior de la pantalla.
+        //La cabecera flota encima y el degradado la funde con el fondo.
         Box(
             Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(vertical = 16.dp),
-            contentAlignment = Alignment.Center
         ) {
             val artModifier = Modifier
-                .widthIn(max = 360.dp)
-                .fillMaxWidth()
-                .aspectRatio(1f)
+                .fillMaxSize()
                 .sharedPlayerElement(PlayerArtKey)
-                .clip(RoundedCornerShape(12.dp))
 
             if (song?.albumArtPath == null) {
                 AlbumArtPlaceholder(
@@ -159,7 +130,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                     modifier = artModifier,
                     background = onSecondary.copy(alpha = 0.12f),
                     contentColor = onSecondary.copy(alpha = 0.7f),
-                    fontSize = 96.sp
+                    fontSize = 140.sp
                 )
             } else {
                 AsyncImage(
@@ -169,6 +140,57 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                     contentScale = ContentScale.Crop
                 )
             }
+
+            //Velo superior: sin el, el chevron se pierde sobre caratulas claras
+            Box(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(background.copy(alpha = 0.55f), Color.Transparent)
+                        )
+                    )
+            )
+
+            //Degradado inferior: funde la imagen con el fondo en vez de cortarla en seco
+            Box(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.4f)
+                    .background(
+                        Brush.verticalGradient(listOf(Color.Transparent, background))
+                    )
+            )
+
+            //Cabecera flotando sobre la imagen
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                PlayerIconButton(
+                    icon = Icons.Filled.KeyboardArrowDown,
+                    contentDescription = "Cerrar",
+                    iconSize = 26.dp,
+                    tint = onSecondary,
+                    onClick = { mediaViewModel.setExpanded(false) }
+                )
+
+                PlayerIconButton(
+                    icon = Icons.Filled.FavoriteBorder,
+                    contentDescription = "Añadir a favoritos",
+                    iconSize = 22.dp,
+                    tint = onSecondary,
+                    // TODO: Agregar a favoritos
+                    onClick = { }
+                )
+            }
         }
 
         //Titulo y artista
@@ -176,6 +198,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             text = song?.title ?: "Sin título",
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(horizontal = 24.dp)
                 .sharedPlayerBounds(PlayerTitleKey)
                 .basicMarquee(),
             style = MaterialTheme.typography.headlineMedium.copy(
@@ -191,6 +214,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
 
         Text(
             text = song?.artist ?: "Sin artista",
+            modifier = Modifier.padding(horizontal = 24.dp),
             style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
             color = onSecondary.copy(alpha = 0.6f),
             maxLines = 1,
@@ -198,6 +222,16 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
         )
 
         Spacer(Modifier.height(24.dp))
+
+        //Bloque inferior: lleva su propio margen lateral y se aparta de la barra
+        //de gestos. La imagen de arriba no se aparta de nada, por eso los insets
+        //ya no estan en la Column raiz.
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+        ) {
 
         //Progreso
         Slider(
@@ -336,6 +370,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             )
         }
 
-        Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
+        }
     }
 }
