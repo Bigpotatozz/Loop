@@ -46,11 +46,14 @@ class FileScanner(
 
                         val repeated = songDao.searchByPath(song.path);
 
-                        if(repeated != null){
-                            Log.d("FileScanner", "Cancion repetida, omitiendo");
-                        }else{
+                        if(repeated == null){
                             songDao.postSong(song)
                             Log.d("FileScanner", "Canción insertada: ${song.title} desde ${file.name}")
+                        } else if (repeated.albumArtPath != song.albumArtPath) {
+                            songDao.updateAlbumArt(repeated.id, song.albumArtPath)
+                            Log.d("FileScanner", "Carátula actualizada: ${song.title} -> ${song.albumArtPath}")
+                        } else {
+                            Log.d("FileScanner", "Cancion repetida sin cambios, omitiendo");
                         }
 
 
