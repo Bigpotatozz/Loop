@@ -149,8 +149,8 @@ class MainActivity : ComponentActivity() {
                                     Box(Modifier.clip(RoundedCornerShape(
                                                 topStart = 0.dp,
                                                 topEnd = 0.dp,
-                                                bottomStart = 25.dp,
-                                                bottomEnd = 25.dp
+                                                bottomStart = 12.dp,
+                                                bottomEnd = 12.dp
                                             ))
                                             .background(MaterialTheme.colorScheme.primary)){
                                         AppNavigation(Modifier,

@@ -116,7 +116,7 @@ fun MediaSongCard(
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val artShape = RoundedCornerShape(12.dp)
+        val artShape = RoundedCornerShape(8.dp)
         val artModifier = if (isPlaying) {
             Modifier
                 .size(56.dp)
@@ -192,7 +192,7 @@ fun MediaSongCardPreview() {
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             MediaSongCard(
-                modifier = Modifier.clip(RoundedCornerShape(16.dp)),
+                modifier = Modifier.clip(RoundedCornerShape(10.dp)),
                 title = "Smells Like Teen Spirit",
                 artist = "Nirvana",
                 albumArt = null,
@@ -200,14 +200,14 @@ fun MediaSongCardPreview() {
                 isPlaying = true
             )
             MediaSongCard(
-                modifier = Modifier.clip(RoundedCornerShape(16.dp)),
+                modifier = Modifier.clip(RoundedCornerShape(10.dp)),
                 title = "Come As You Are",
                 artist = "Nirvana",
                 albumArt = null,
                 duration = 219000L
             )
             MediaSongCard(
-                modifier = Modifier.clip(RoundedCornerShape(16.dp)),
+                modifier = Modifier.clip(RoundedCornerShape(10.dp)),
                 title = "Something In The Way",
                 artist = "Nirvana",
                 albumArt = null,

@@ -137,7 +137,7 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                     itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
                         MediaSongCard(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .clickable(onClick = { mediaViewModel.playSong(song, index) }),
                             title = song.title,
                             artist = song.artist,
@@ -157,7 +157,7 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
             CompositionLocalProvider(LocalPlayerAnimatedScope provides this) {
                 Box(Modifier
                     .padding(5.dp)
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .clickable(onClick = {
                         mediaViewModel.setExpanded(true);
                     })){

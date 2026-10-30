@@ -106,7 +106,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
     Column(
         Modifier
             .fillMaxSize()
-            .sharedPlayerBounds(PlayerContainerKey)
+            .sharedPlayerBounds(PlayerContainerKey, corner = 0.dp, cornerOther = 12.dp)
             .background(MaterialTheme.colorScheme.secondary)
             .windowInsetsPadding(WindowInsets.systemBars)
             .padding(horizontal = 24.dp)
@@ -151,7 +151,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .sharedPlayerElement(PlayerArtKey)
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(12.dp))
 
             if (song?.albumArtPath == null) {
                 AlbumArtPlaceholder(
@@ -312,7 +312,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(10.dp))
                 .clickable(enabled = nextSong != null) { mediaViewModel.playNextNoShuffle() }
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically

@@ -99,7 +99,7 @@ private fun MiniPlayerContent(
     Row(
         Modifier
             .fillMaxWidth()
-            .sharedPlayerBounds(PlayerContainerKey)
+            .sharedPlayerBounds(PlayerContainerKey, corner = 12.dp, cornerOther = 0.dp)
             .background(MaterialTheme.colorScheme.secondary)
             .heightIn(min = 68.dp)
             .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -109,7 +109,7 @@ private fun MiniPlayerContent(
         val artModifier = Modifier
             .size(44.dp)
             .sharedPlayerElement(PlayerArtKey)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(8.dp))
 
         if (albumArt == null) {
             AlbumArtPlaceholder(
@@ -199,7 +199,7 @@ fun MiniPlayerContentPreview(){
                 .padding(5.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(Modifier.clip(RoundedCornerShape(20.dp))) {
+            Box(Modifier.clip(RoundedCornerShape(12.dp))) {
                 MiniPlayerContent(
                     title = "Smells Like Teen Spirit",
                     artist = "Nirvana",
@@ -208,7 +208,7 @@ fun MiniPlayerContentPreview(){
                     onPrevious = {}, onPlayPause = {}, onNext = {}
                 )
             }
-            Box(Modifier.clip(RoundedCornerShape(20.dp))) {
+            Box(Modifier.clip(RoundedCornerShape(12.dp))) {
                 MiniPlayerContent(
                     title = "Something In The Way",
                     artist = "Nirvana",
