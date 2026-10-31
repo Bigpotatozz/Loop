@@ -116,22 +116,16 @@ class DownloadMusicService: Service() {
                 val musicDir = getMusicDirectory();
                 Log.d("DownloadService", "Descargando a: ${musicDir.absolutePath}");
 
-                val request = YoutubeDLRequest(youtubeUrl).apply {
-                    addOption("-f", "bestaudio[ext=m4a]/best");
-                    addOption("-x")
-                    addOption("--audio-format", "m4a")
-                    addOption("--audio-quality", "0")
-                    addOption("--add-metadata")
-                    addOption("--embed-metadata")
-                    addOption("--write-thumbnail") //Obtiene la imagen
-                    addOption("--convert-thumbnail", "jpg") //Guarda la imagen en jpg
-                    addOption("-o", "${musicDir.absolutePath}/%(title)s.%(ext)s")
-
-                }
-
                 //Eejcuta la descarga
                 Log.d("DownloadService", "Iniciando descarga con opciones de metadatos embebidos")
-                val result = YoutubeDL.getInstance().execute(request);
+                var result = YoutubeDL.getInstance().execute(buildRequest(youtubeUrl, musicDir))
+                
+                if (result.exitCode != 0) {
+                    Log.w("DownloadService", "Falló (código ${result.exitCode}), reintentando sin caché")
+                    result = YoutubeDL.getInstance().execute(
+                        buildRequest(youtubeUrl, musicDir, clearCache = true)
+                    )
+                }
 
                 if (result.exitCode == 0){
 
@@ -204,6 +198,27 @@ class DownloadMusicService: Service() {
 
         }
     }
+
+    //Opciones de la descarga. Extraido aqui para poder repetir la misma peticion
+    //en el reintento cambiando unicamente lo de la cache.
+    private fun buildRequest(
+        youtubeUrl: String,
+        musicDir: File,
+        clearCache: Boolean = false
+    ): YoutubeDLRequest = YoutubeDLRequest(youtubeUrl).apply {
+        if (clearCache) addOption("--rm-cache-dir")
+
+        addOption("-f", "bestaudio[ext=m4a]/best")
+        addOption("-x")
+        addOption("--audio-format", "m4a")
+        addOption("--audio-quality", "0")
+        addOption("--add-metadata")
+        addOption("--embed-metadata")
+        addOption("--write-thumbnail") //Obtiene la imagen
+        addOption("--convert-thumbnail", "jpg") //Guarda la imagen en jpg
+        addOption("-o", "${musicDir.absolutePath}/%(title)s.%(ext)s")
+    }
+
 
     //Recorta la caratula a cuadrada, recibe el archivo y lo sobreescribe
     private fun cropToCenteredSquare(file: File) {
