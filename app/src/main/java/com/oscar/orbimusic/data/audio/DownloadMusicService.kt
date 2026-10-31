@@ -24,7 +24,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import java.io.File
+import java.io.FileOutputStream
 import kotlin.math.log
 
 
@@ -161,6 +164,8 @@ class DownloadMusicService: Service() {
                             val newPath = File(albumArtDir, newestJpg.name)
                             newestJpg.renameTo(newPath)
                             Log.d("DownloadService", "JPG movido a album_art: ${newestJpg.name}")
+
+                            cropToCenteredSquare(newPath)
                         }
 
 
@@ -199,6 +204,41 @@ class DownloadMusicService: Service() {
 
         }
     }
+
+    //Recorta la caratula a cuadrada, recibe el archivo y lo sobreescribe
+    private fun cropToCenteredSquare(file: File) {
+        try {
+            // Decodifica la imagen
+            val original = BitmapFactory.decodeFile(file.path) ?: return
+            //Si ya es cuadrada simplemente la vuelve a usar y la retorna
+            if (original.width == original.height) {
+                original.recycle()
+                return
+            }
+            //Saca las medidas originales de la imagen
+            val side = minOf(original.width, original.height)
+
+            //Saca el centro y hace el recorte
+            val left = (original.width - side) / 2
+            val top = (original.height - side) / 2
+            val square = Bitmap.createBitmap(original, left, top, side, side)
+            // Lo parsea a JPG
+            FileOutputStream(file).use { out ->
+                square.compress(Bitmap.CompressFormat.JPEG, 90, out)
+            }
+
+            //createBitmap puede devolver la misma instancia si el recorte abarca
+            if (square != original) original.recycle()
+            square.recycle()
+
+            Log.d("DownloadService", "Carátula recortada a ${side}x$side: ${file.name}")
+
+        } catch (e: Exception) {
+            //Un recorte fallido no debe tumbar la descarga: se queda el 16:9
+            Log.e("DownloadService", "No se pudo recortar la carátula ${file.name}", e)
+        }
+    }
+
 
     private fun getMusicDirectory(): File{
         val dir = File(

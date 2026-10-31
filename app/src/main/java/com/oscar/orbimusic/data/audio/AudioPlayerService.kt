@@ -17,7 +17,10 @@ import androidx.annotation.OptIn
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import android.net.Uri
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import java.io.File
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -211,6 +214,14 @@ class AudioPlayerService: Service() {
         val mediaItems = songs.map { song ->
             MediaItem.Builder()
                 .setUri(song.path)
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(song.title)
+                        .setArtist(song.artist)
+                        .setAlbumTitle(song.album)
+                        .setArtworkUri(song.albumArtPath?.let { Uri.fromFile(File(it)) })
+                        .build()
+                )
                 .build()
         }
         //Le indica a expoLayer cuales son las canciones a reproducir
