@@ -91,10 +91,133 @@ esta pantalla no se ha tocado; la lista, el mini-player y el expandido sí.
 
 ---
 
+## Idea: personalización a partir del uso (sin diseñar)
+
+**Estado:** idea del usuario, con un análisis de viabilidad hecho. **No hay
+diseño ni plan.** Cuando se retome, empezar por brainstorming y escribir un
+documento antes de tocar código — es un proyecto, no un retoque.
+
+### La idea, en sus palabras
+
+Recopilar cuántas veces se reproduce cada canción y usar ese dato para:
+
+- **En Search:** accesos directos a los últimos lanzamientos o *hits* de los
+  artistas que más escucha, para descargarlos sin buscarlos a mano.
+- **En Home:** sus playlists, y debajo bloques tipo "tu artista más escuchado
+  del mes" o "tu top de canciones".
+
+El buscador manual de descarga (ver sección anterior) sigue existiendo; esto
+se suma, no lo sustituye.
+
+### La mitad fácil
+
+Nada de esto tiene dificultad técnica real:
+
+- **Registrar reproducciones.** Tabla `play_history` y una fila por escucha.
+  `MediaViewModel.playSong()` es el punto donde ocurre.
+- **Las estadísticas.** Son consultas SQL con `GROUP BY` y `COUNT`. Para esto
+  existen las bases relacionales.
+- **Playlists.** Tablas, CRUD y pantalla. Trabajo normal.
+
+Detalle a decidir: **cuándo cuenta como "reproducida"**. `playSong()` se llama
+también al saltar de canción, así que contar en la llamada infla las cifras al
+pasar canciones rápido. Lo habitual es contar tras N segundos o al superar un
+porcentaje de la duración.
+
+### El punto débil: "últimos lanzamientos o hits"
+
+Esta parte **no la puede resolver yt-dlp** y conviene saberlo antes de
+prometerla.
+
+Para listar lo que ha sacado un artista hace falta conocer su discografía.
+`ytsearch:<artista>` devuelve lo que YouTube considera relevante para ese
+texto: vídeos con letra, versiones, reacciones, directos antiguos. Es una
+búsqueda, no una discografía.
+
+Opciones reales:
+
+- **El canal del artista** (`/@artista/videos`) ordenado por fecha. El problema
+  es mapear el nombre de la etiqueta del archivo al canal oficial, que falla a
+  menudo.
+- **Una API de metadatos musicales.** MusicBrainz es gratuita y sin clave y sí
+  da discografía de verdad; Last.fm daría "temas más escuchados". Implica
+  dependencia nueva y red, pero es la herramienta correcta.
+
+### La dependencia oculta: la calidad del campo `artist`
+
+Todo el apartado de "tu artista más escuchado" se apoya en `songs.artist`, que
+sale de los metadatos que yt-dlp incrusta al descargar:
+
+```kotlin
+val artist = retriever.extractMetadata(METADATA_KEY_ARTIST) ?: "Desconocido"
+```
+
+Riesgo conocido: en YouTube ese campo suele traer el nombre del canal
+(`Bad Bunny - Topic`), el de un sello, o nada. Si está sucio, las
+estadísticas agrupan mal y la función queda rara sin que se entienda por qué.
+
+**Comprobado el 2026-10-31: el usuario revisó su biblioteca y los nombres de
+artista salen limpios.** La idea es viable por ese lado, pero conviene
+revisarlo otra vez si la biblioteca crece mucho.
+
+### Tablas que haría falta modelar
+
+Nada de esto existe hoy; la base tiene una sola tabla (`songs`).
+
+- `play_history` — una fila por escucha (`songId`, `playedAt`)
+- `playlists` + `playlist_songs` — relación muchos a muchos
+- favoritos: columna en `songs` o tabla aparte, sin decidir
+
+**Aviso importante:** `SongDatabase` usa `fallbackToDestructiveMigration()`,
+que **borra la base entera** al cambiar de versión. Hoy no duele porque todo
+se regenera escaneando la carpeta, pero estas tablas guardan datos que **solo
+viven en la base**. Antes de crearlas hay que poner `exportSchema = true` y
+escribir migraciones de verdad.
+
+---
+
+## Bug resuelto que conviene recordar: `403 Forbidden` permanente al descargar
+
+Síntoma: las descargas funcionaban, y de pronto **todas** empezaron a fallar
+con `HTTP Error 403: Forbidden`, incluso con URLs correctas. No se arreglaba
+solo ni reiniciando.
+
+**Causa: la caché de yt-dlp.** yt-dlp guarda datos del reproductor de YouTube
+(entre otras cosas, funciones de firma). Si en una descarga concreta cachea
+algo que YouTube luego rechaza, **todas las descargas siguientes dan 403**.
+El síntoma no apunta en absoluto a la causa — parece una rotura general de
+YouTube. La pista buena fue que empezó justo tras una descarga concreta.
+
+**Arreglo aplicado:** `downloadFromYt` reintenta **una vez** con
+`--rm-cache-dir` si el primer intento falla. En el caso normal se descarga con
+caché a velocidad plena; si se envenena, la app se recupera sola. Las opciones
+se extrajeron a `buildRequest(url, dir, clearCache)` para no duplicarlas.
+
+Si el aviso `"Falló (código N), reintentando sin caché"` aparece a menudo en
+Logcat, tocaría pasar a `--no-cache-dir` permanente.
+
+**Pista falsa:** el log trae también `Your yt-dlp version (2025.11.12) is older
+than 90 days` y un aviso sobre SABR. No era eso. Pero sigue siendo cierto que
+el binario está desactualizado — ver el punto siguiente.
+
+---
+
 ## Problemas conocidos sin arreglar
 
 Detectados durante el trabajo de esta sesión. Ninguno bloquea, pero están
 identificados con su causa.
+
+**La actualización de yt-dlp no parece surtir efecto.**
+`initializeYtDL()` llama a `updateYoutubeDL()` en cada arranque, pero el
+binario sigue reportando `2025.11.12` (casi un año). Tres cosas a revisar:
+1. El `UpdateStatus` que devuelve (`DONE` / `ALREADY_UP_TO_DATE`) se descarta,
+   así que no se sabe si funciona. Habría que registrarlo.
+2. `isInitialized.complete(true)` se ejecuta **antes** de actualizar, así que
+   una descarga puede adelantar a la actualización y usar el binario viejo.
+3. Usa el canal `STABLE` por defecto. Para roturas de YouTube, los arreglos
+   llegan antes a `UpdateChannel.NIGHTLY`.
+Sospechoso de que falle: la API de GitHub sin autenticar permite 60 peticiones
+por hora y por IP; al agotarse, la actualización falla y el `catch` lo registra.
 
 **`_isDownloading` se queda colgado al fallar una descarga.**
 `DownloadViewModel` hace `_isDownloading.value = !progress.isCompleted`, y
