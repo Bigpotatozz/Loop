@@ -56,6 +56,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.util.UnstableApi
 import com.oscar.orbimusic.di.AppModule
@@ -87,8 +88,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         AppModule.initialize(this)
-        val mediaViewModel: MediaViewModel = AppModule.provideMediaViewModel();
-        val downloadViewModel: DownloadViewModel = AppModule.provideDownloadViewModel();
+
+        //Se los pedimos al ViewModelStore de la Activity, que es lo que Android
+        //conserva al recrearla. Si ya existen los reutiliza; si no, los crea con
+        //la factory. Antes se construian a mano y se perdian al cambiar el tema.
+        val mediaViewModel: MediaViewModel =
+            ViewModelProvider(this, AppModule.mediaViewModelFactory)[MediaViewModel::class.java]
+        val downloadViewModel: DownloadViewModel =
+            ViewModelProvider(this, AppModule.downloadViewModelFactory)[DownloadViewModel::class.java]
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             requestPermissions.launch(arrayOf(
