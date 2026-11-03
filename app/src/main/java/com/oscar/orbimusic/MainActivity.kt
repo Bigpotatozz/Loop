@@ -3,9 +3,23 @@ package com.oscar.orbimusic
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContract
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import com.oscar.orbimusic.presentation.ui.animations.LocalPlayerAnimatedScope
+import com.oscar.orbimusic.presentation.ui.animations.LocalSharedTransitionScope
+import com.oscar.orbimusic.presentation.ui.screens.ExpandedPlayerScreen
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
@@ -14,15 +28,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.ColorScheme
+import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,34 +42,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.oscar.orbimusic.presentation.ui.screens.HomeScreen
 import com.oscar.orbimusic.presentation.ui.screens.MediaScreen
-import com.oscar.orbimusic.presentation.ui.screens.SearchScreen
 import com.oscar.orbimusic.presentation.ui.theme.OrbiMusicTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
-import org.w3c.dom.Text
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.util.UnstableApi
-import androidx.navigation.compose.rememberNavController
 import com.oscar.orbimusic.di.AppModule
 import com.oscar.orbimusic.presentation.ui.screens.DownloadScreen
 import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
@@ -82,13 +83,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @OptIn(UnstableApi::class)
+    @OptIn(UnstableApi::class, ExperimentalSharedTransitionApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         AppModule.initialize(this)
-        val mediaViewModel: MediaViewModel = AppModule.provideMediaViewModel();
-        val downloadViewModel: DownloadViewModel = AppModule.provideDownloadViewModel();
+
+        //Se los pedimos al ViewModelStore de la Activity, que es lo que Android
+        //conserva al recrearla. Si ya existen los reutiliza; si no, los crea con
+        //la factory. Antes se construian a mano y se perdian al cambiar el tema.
+        val mediaViewModel: MediaViewModel =
+            ViewModelProvider(this, AppModule.mediaViewModelFactory)[MediaViewModel::class.java]
+        val downloadViewModel: DownloadViewModel =
+            ViewModelProvider(this, AppModule.downloadViewModelFactory)[DownloadViewModel::class.java]
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             requestPermissions.launch(arrayOf(
@@ -104,44 +111,85 @@ class MainActivity : ComponentActivity() {
 
 
 
+        //auto() elige el velo segun el modo del sistema. El primer color es para
+        //tema claro y el segundo para oscuro, y deben casar con el terciario.
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(
-                android.graphics.Color.BLACK,
-                android.graphics.Color.WHITE
+            statusBarStyle = SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
             ),
-            navigationBarStyle = SystemBarStyle.light(
-                android.graphics.Color.parseColor("#D9D9D9"), // Fondo gris abajo (tu terciario)
-                android.graphics.Color.parseColor("#D9D9D9")
+            navigationBarStyle = SystemBarStyle.auto(
+                android.graphics.Color.parseColor("#D9D9D9"), // terciario claro
+                android.graphics.Color.parseColor("#1C1C1E")  // terciario oscuro
             )
         )
         setContent {
             val navController = rememberNavController();
+            val isExpanded by mediaViewModel.isExpanded.collectAsState()
+            val playerState by mediaViewModel.playerState.collectAsState()
+
+            // Es la view o variable que almacena toda la activity
+            val view = LocalView.current
+            val darkTheme = isSystemInDarkTheme()
+            LaunchedEffect(isExpanded, darkTheme) {
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.isAppearanceLightStatusBars = !isExpanded && !darkTheme
+                controller.isAppearanceLightNavigationBars = !darkTheme
+            }
+
             OrbiMusicTheme {
-                Scaffold(modifier = Modifier.fillMaxSize(),
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    bottomBar = {
-                    Navbar(navController)
-                }) { innerPadding ->
 
-                    Box(Modifier.fillMaxSize()
-                        .padding(innerPadding)
-                        .background(MaterialTheme.colorScheme.tertiary)){
 
-                        Box(Modifier.clip(RoundedCornerShape(
-                                    topStart = 0.dp,
-                                    topEnd = 0.dp,
-                                    bottomStart = 25.dp,
-                                    bottomEnd = 25.dp
-                                ))
-                                .background(MaterialTheme.colorScheme.primary)){
-                            AppNavigation(Modifier,
-                                hostController = navController,
-                                mediaViewModel,
-                                downloadViewModel)
+                //Es una caja que me da herramientas para animacion y las ejecuta
+                SharedTransitionLayout {
+                    //Accede y guarda un valor al que van a poder acceder todos sus hijos
+                    CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+                        Box(Modifier.fillMaxSize()) {
+
+                            Scaffold(modifier = Modifier.fillMaxSize(),
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                bottomBar = {
+                                Navbar(navController)
+                            }) { innerPadding ->
+
+                                Box(Modifier.fillMaxSize()
+                                    .padding(innerPadding)
+                                    .background(MaterialTheme.colorScheme.tertiary)){
+
+                                    Box(Modifier.clip(RoundedCornerShape(
+                                                topStart = 0.dp,
+                                                topEnd = 0.dp,
+                                                bottomStart = 12.dp,
+                                                bottomEnd = 12.dp
+                                            ))
+                                            .background(MaterialTheme.colorScheme.primary)){
+                                        AppNavigation(Modifier,
+                                            hostController = navController,
+                                            mediaViewModel,
+                                            downloadViewModel)
+                                    }
+
+                                }
+
+                            }
+                            //Muestra u oculta la animacion
+                            AnimatedVisibility(
+                                visible = isExpanded,
+                                enter = fadeIn(),
+                                exit = fadeOut()
+                            ) {
+                                CompositionLocalProvider(LocalPlayerAnimatedScope provides this) {
+                                    //Si es expanded el boton hacia atras simplemente pone el expanded en false
+                                    BackHandler(enabled = isExpanded) {
+                                        mediaViewModel.setExpanded(false)
+                                    }
+                                    
+                                    //Componente expandedPlayer, recibe el playerState y su respectivo viewModel
+                                    ExpandedPlayerScreen(playerState, mediaViewModel)
+                                }
+                            }
                         }
-
                     }
-
                 }
             }
         }
@@ -185,8 +233,8 @@ fun Navbar(navController: NavController){
     var selectedItem by rememberSaveable{ mutableStateOf(0) }
 
     val items = listOf("Home", "Media", "Search");
-    val selectedIcons = listOf(Icons.Filled.Home, Icons.Filled.Album, Icons.Filled.Search);
-    val unselectedIcons = listOf(Icons.Filled.Home, Icons.Filled.Album, Icons.Filled.Search);
+    val selectedIcons = listOf(Icons.Rounded.Home, Icons.Rounded.Album, Icons.Rounded.Search);
+    val unselectedIcons = listOf(Icons.Rounded.Home, Icons.Rounded.Album, Icons.Rounded.Search);
 
 
 
@@ -201,7 +249,7 @@ fun Navbar(navController: NavController){
                 selected = selectedItem == index,
                 onClick = {
                     selectedItem = index
-                    navController.navigate(item)
+                    navController.navigate(item.lowercase())
                 },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.onPrimary,

@@ -1,263 +1,427 @@
 package com.oscar.orbimusic.presentation.ui.screens
 
-import android.annotation.SuppressLint
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.AnchoredDraggableDefaults
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.DraggableAnchors
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.anchoredDraggable
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.QueueMusic
-import androidx.compose.material.icons.filled.QueuePlayNext
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import coil.compose.AsyncImage
-import com.oscar.orbimusic.R
 import com.oscar.orbimusic.domain.model.PlayerState
-import com.oscar.orbimusic.presentation.ui.components.PastPrevMediaSong
+import com.oscar.orbimusic.presentation.ui.animations.PlayerArtKey
+import com.oscar.orbimusic.presentation.ui.animations.PlayerContainerKey
+import com.oscar.orbimusic.presentation.ui.animations.PlayerTitleKey
+import com.oscar.orbimusic.presentation.ui.components.AlbumArtPlaceholder
+import com.oscar.orbimusic.presentation.ui.theme.PlayerInk
+import com.oscar.orbimusic.presentation.ui.theme.PlayerSurface
+import com.oscar.orbimusic.presentation.ui.animations.sharedPlayerBounds
+import com.oscar.orbimusic.presentation.ui.animations.sharedPlayerElement
 import com.oscar.orbimusic.presentation.utils.parseTime
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
 
 
-/*playerState: PlayerState, mediaViewModel: MediaViewModel*/
+//Los dos estados del gesto de minimizar
+private enum class PlayerDrag { Open, Dismissed }
+
+
+//Boton circular con area de toque accesible. El del mini-player esta fijado a 44/24dp
+//y vive en otro archivo, asi que aqui lleva sus propias medidas.
+@Composable
+private fun PlayerIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    iconSize: Dp,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Box(
+        Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(iconSize),
+            tint = tint
+        )
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewModel){
 
-    val currentPositionSong by mediaViewModel.currentPosition.collectAsState();
-
-
-    Column(modifier = Modifier.fillMaxSize()
-        .padding(8.dp)
-        .clip(RoundedCornerShape(25.dp))
-        .background(Color.Black),
-        horizontalAlignment = Alignment.CenterHorizontally,) {
-
-        Row(Modifier.padding(start = 20.dp, top = 15.dp, bottom = 15.dp, end = 20.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-
-
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(100))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                    .padding(6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.KeyboardArrowDown,
-                    contentDescription = "Cerrar",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp).clickable(onClick = {
-                        mediaViewModel.setExpanded(false);
-                    })
-                )
-            }
-
-
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                ModeIndicator(mediaViewModel = mediaViewModel)
-            }
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(100))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                    .padding(6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.FavoriteBorder,
-                    contentDescription = "Favorito",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp).clickable(onClick = {
-                        // TODO: Agregar a favoritos
-                    })
-                )
-            }
-        }
-
-        Spacer(Modifier.padding(10.dp))
-
-
-
-
-
-        AsyncImage(
-            model = playerState.currentSong?.albumArtPath,
-            contentDescription = playerState.currentSong?.title,
-            modifier = Modifier.clip(RoundedCornerShape(25.dp)).size(290.dp),
-            contentScale = ContentScale.Crop
-        )
-
-        Spacer(Modifier.padding(5.dp))
-
-
-
-
-        Text(
-            playerState.currentSong?.title ?: "SIN TITULO",
-            Modifier.padding(horizontal = 30.dp).basicMarquee(),
-            style = MaterialTheme.typography.labelLarge.copy(fontSize = 24.sp, color = Color.White),
-            )
-        Text(
-            playerState.currentSong?.artist ?: "SIN ARTISTA",
-            style = MaterialTheme.typography.headlineSmall.copy(fontSize = 18.sp, color = Color.Gray))
-
-
-        Row(Modifier) {
-            PastPrevMediaSong(
-                playerState,
-                mediaViewModel,
-                playerState.currentSong!!.duration,
-                currentPositionSong,
-                parseTime = {
-                    parseTime(playerState.currentSong.duration)
-                }
-            )
-        }
-
-
-        Box(Modifier.padding(15.dp)){
-            NextSongComponent(mediaViewModel)
-        }
-
-    }
-
-}
-
-
-
-@Composable
-fun ModeIndicator(mediaViewModel: MediaViewModel) {
+    val currentPosition by mediaViewModel.currentPosition.collectAsState()
     val shuffle by mediaViewModel.shuffle.collectAsState()
     val repeat by mediaViewModel.repeat.collectAsState()
+    val nextSong by mediaViewModel.nextSong.collectAsState()
 
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
+    val song = playerState.currentSong
+    val duration = song?.duration ?: 0L
+
+    //El expandido no sigue al tema: es oscuro en claro y en oscuro. La caratula
+  
+    val playerInk = PlayerInk
+    val background = PlayerSurface
+
+    //Gesto de arrastrar hacia abajo para minimizar.
+//Obtiene la altura del height actual
+    val screenHeightPx = with(LocalDensity.current) {
+        LocalConfiguration.current.screenHeightDp.dp.toPx()
+    }
+    //Gesto de arrastrar el dedo
+    val dragState = remember(screenHeightPx) {
+        //Este es el objeto que mide el trackeo del dedo
+        AnchoredDraggableState(
+            initialValue = PlayerDrag.Open,
+            anchors = DraggableAnchors {
+                PlayerDrag.Open at 0f
+                PlayerDrag.Dismissed at screenHeightPx
+            }
+        )
+    }
+
+    //Al encajar en Dismissed se cierra de verdad; de ahi en adelante manda la
+    //transicion compartida, igual que al pulsar el chevron
+    LaunchedEffect(dragState.settledValue) {
+        if (dragState.settledValue == PlayerDrag.Dismissed) {
+            mediaViewModel.setExpanded(false)
+        }
+    }
+
+    val dragOffset = dragState.offset.let { if (it.isNaN()) 0f else it }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .offset { IntOffset(0, dragOffset.roundToInt()) }
+            .sharedPlayerBounds(PlayerContainerKey, corner = 0.dp, cornerOther = 12.dp)
+            .background(background)
     ) {
-        when {
-            shuffle -> {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Shuffle,
-                        contentDescription = "Shuffle activo",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
+
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .anchoredDraggable(
+                    state = dragState,
+                    orientation = Orientation.Vertical,
+                    flingBehavior = AnchoredDraggableDefaults.flingBehavior(
+                        state = dragState,
+                        positionalThreshold = { distance -> distance * 0.25f }
                     )
-                    Spacer(Modifier.padding(4.dp))
-                    Text(
-                        "Shuffle",
-                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary),
+                )
+        ) {
+            val artModifier = Modifier
+                .fillMaxSize()
+                .sharedPlayerElement(PlayerArtKey)
+                .drawWithContent {
+                    drawContent()
+
+                    //Velo superior, para que el chevron se lea sobre caratulas claras
+                    drawRect(
+                        Brush.verticalGradient(
+                            colors = listOf(background.copy(alpha = 0.55f), Color.Transparent),
+                            startY = 0f,
+                            endY = size.height * 0.18f
+                        )
+                    )
+
+                    //Funde el borde inferior con el fondo en vez de cortarlo en seco
+                    drawRect(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, background),
+                            startY = size.height * 0.6f,
+                            endY = size.height
+                        )
                     )
                 }
+
+            if (song?.albumArtPath == null) {
+                AlbumArtPlaceholder(
+                    title = song?.title ?: "?",
+                    modifier = artModifier,
+                    background = playerInk.copy(alpha = 0.12f),
+                    contentColor = playerInk.copy(alpha = 0.7f),
+                    fontSize = 140.sp
+                )
+            } else {
+                AsyncImage(
+                    model = song.albumArtPath,
+                    contentDescription = song.title,
+                    modifier = artModifier,
+                    contentScale = ContentScale.Crop
+                )
             }
-            repeat -> {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Repeat,
-                        contentDescription = "Repeat activo",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.padding(4.dp))
-                    Text(
-                        "Repeat",
-                        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary),
-                    )
-                }
-            }
-            else -> {
-                Text(
-                    "Normal",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-                    ),
+
+            //Cabecera flotando sobre la imagen
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                PlayerIconButton(
+                    icon = Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = "Cerrar",
+                    iconSize = 26.dp,
+                    tint = playerInk,
+                    onClick = { mediaViewModel.setExpanded(false) }
+                )
+
+                PlayerIconButton(
+                    icon = Icons.Rounded.FavoriteBorder,
+                    contentDescription = "Añadir a favoritos",
+                    iconSize = 22.dp,
+                    tint = playerInk,
+                    // TODO: Agregar a favoritos
+                    onClick = { }
                 )
             }
         }
-    }
-}
 
+        //Titulo y artista
+        Text(
+            text = song?.title ?: "Sin título",
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .sharedPlayerBounds(PlayerTitleKey)
+                .basicMarquee(),
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontSize = 28.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.5).sp
+            ),
+            color = playerInk,
+            maxLines = 1
+        )
 
-@SuppressLint("SuspiciousIndentation")
-@Composable
-fun NextSongComponent(mediaViewModel: MediaViewModel){
-    val nextSong by mediaViewModel.nextSong.collectAsState();
+        Spacer(Modifier.height(4.dp))
 
-        Row(Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(15.dp))
-            .background(MaterialTheme.colorScheme.primary),
-            verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = song?.artist ?: "Sin artista",
+            modifier = Modifier.padding(horizontal = 24.dp),
+            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+            color = playerInk.copy(alpha = 0.6f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
 
-            Row(Modifier.weight(0.7f).padding(5.dp),
-                verticalAlignment = Alignment.CenterVertically){
-                AsyncImage(model = nextSong?.albumArtPath,
-                    contentDescription = "Imagen de album",
-                    Modifier.clip(RoundedCornerShape(15.dp)).size(60.dp),
-                    contentScale = ContentScale.Crop,)
+        Spacer(Modifier.height(24.dp))
 
+        //Bloque inferior: lleva su propio margen lateral y se aparta de la barra
+        //de gestos. La imagen de arriba no se aparta de nada, por eso los insets
+        //ya no estan en la Column raiz.
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+        ) {
 
-                Column(Modifier.padding(start = 12.dp)) {
-                        Text(nextSong?.title ?: "Sin titulo",
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp),)
+        //Progreso
+        Slider(
+            value = if (duration > 0) currentPosition.toFloat() else 0f,
+            onValueChange = { mediaViewModel.seekTo(it.toLong()) },
+            valueRange = 0f..if (duration > 0) duration.toFloat() else 1f,
+            modifier = Modifier.fillMaxWidth(),
+            thumb = {
+                Box(
+                    Modifier
+                        .size(width = 4.dp, height = 20.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(playerInk)
+                )
+            },
+            track = { sliderState ->
+                SliderDefaults.Track(
+                    sliderState = sliderState,
+                    modifier = Modifier
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(10.dp)),
+                    colors = SliderDefaults.colors(
+                        activeTrackColor = playerInk,
+                        inactiveTrackColor = playerInk.copy(alpha = 0.25f)
+                    )
+                )
+            },
+            colors = SliderDefaults.colors(
+                activeTrackColor = playerInk,
+                inactiveTrackColor = playerInk.copy(alpha = 0.25f)
+            )
+        )
 
-
-                    Text(nextSong?.artist ?: "Sin artista",
-                        style = MaterialTheme.typography.titleSmall.copy(fontSize = 10.sp, color = Color.Gray),)
-                }
-            }
-
-            Icon( imageVector = Icons.Filled.QueuePlayNext,
-                contentDescription = "next",
-                modifier = Modifier.size(30.dp)
-                    .weight(0.3f)
-                    .clickable(onClick = {
-                    mediaViewModel.playNextNoShuffle()
-                }))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = parseTime(currentPosition),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = playerInk.copy(alpha = 0.6f)
+            )
+            Text(
+                text = parseTime(duration),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = playerInk.copy(alpha = 0.6f)
+            )
         }
 
+        Spacer(Modifier.height(20.dp))
+
+        //Controles
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            PlayerIconButton(
+                icon = Icons.Rounded.Shuffle,
+                contentDescription = if (shuffle) "Desactivar aleatorio" else "Activar aleatorio",
+                iconSize = 22.dp,
+                tint = if (shuffle) playerInk else playerInk.copy(alpha = 0.4f),
+                onClick = { mediaViewModel.setShuffle(!shuffle) }
+            )
+
+            PlayerIconButton(
+                icon = Icons.Rounded.SkipPrevious,
+                contentDescription = "Canción anterior",
+                iconSize = 32.dp,
+                tint = playerInk,
+                onClick = { mediaViewModel.playPrevious() }
+            )
+
+            //Unico elemento relleno: el peso visual de la pantalla
+            Box(
+                Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(playerInk)
+                    .clickable(onClick = { mediaViewModel.togglePlayPause() }),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (playerState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    contentDescription = if (playerState.isPlaying) "Pausar" else "Reproducir",
+                    modifier = Modifier.size(28.dp),
+                    tint = background
+                )
+            }
+
+            PlayerIconButton(
+                icon = Icons.Rounded.SkipNext,
+                contentDescription = "Siguiente canción",
+                iconSize = 32.dp,
+                tint = playerInk,
+                onClick = { mediaViewModel.playNext() }
+            )
+
+            PlayerIconButton(
+                icon = Icons.Rounded.Repeat,
+                contentDescription = if (repeat) "Desactivar repetición" else "Repetir canción",
+                iconSize = 22.dp,
+                tint = if (repeat) playerInk else playerInk.copy(alpha = 0.4f),
+                onClick = { mediaViewModel.setRepeat(!repeat) }
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        //Siguiente en la cola: una linea, no una tarjeta
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .clickable(enabled = nextSong != null) { mediaViewModel.playNextNoShuffle() }
+                .padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Sigue",
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                color = playerInk.copy(alpha = 0.5f)
+            )
+            Text(
+                text = "  ·  ",
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                color = playerInk.copy(alpha = 0.3f)
+            )
+            Text(
+                text = nextSong?.title ?: "Fin de la cola",
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                color = if (nextSong != null) playerInk else playerInk.copy(alpha = 0.5f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+            Spacer(Modifier.height(8.dp))
+        }
     }
-
-
-
+}

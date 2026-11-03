@@ -1,62 +1,81 @@
 package com.oscar.orbimusic.presentation.ui.screens
 
-import android.util.Log
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBackIosNew
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.oscar.orbimusic.R
+import com.oscar.orbimusic.presentation.ui.animations.LocalPlayerAnimatedScope
 import com.oscar.orbimusic.presentation.ui.components.MediaSongCard
 import com.oscar.orbimusic.presentation.ui.components.PrevMediaSong
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
+
+//Pildora de filtro: negra cuando esta seleccionada, con borde hairline cuando no
+@Composable
+private fun FilterPill(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(100)
+
+    Box(
+        Modifier
+            .clip(shape)
+            .background(if (selected) MaterialTheme.colorScheme.secondary else Color.Transparent)
+            .border(
+                width = 1.dp,
+                color = if (selected) Color.Transparent else MaterialTheme.colorScheme.outline,
+                shape = shape
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 9.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge.copy(
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            ),
+            color = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,138 +83,87 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
     val songs by mediaViewModel.allSongs.collectAsState();
     val playerState by mediaViewModel.playerState.collectAsState();
-    val duration by mediaViewModel.duration.collectAsState();
-    val currentPositionMedia by mediaViewModel.currentPosition.collectAsState();
     val isExpanded by mediaViewModel.isExpanded.collectAsState();
 
+    //0 = nombre, 1 = artista, 2 = recientes
+    var selectedFilter by rememberSaveable { mutableIntStateOf(2) }
 
+    Column(Modifier.fillMaxSize()) {
 
+                Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp, bottom = 16.dp)) {
 
+                    Text(
+                        text = "Biblioteca",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = (-0.5).sp
+                        )
+                    )
 
-    val durationInSeconds = duration / 1000
-    val minutes = durationInSeconds / 60
-    val seconds = durationInSeconds % 60
+                    Spacer(Modifier.height(2.dp))
 
-    val stateList = remember { mutableStateListOf(false, false, true) }
+                    Text(
+                        text = if (songs.size == 1) "1 canción" else "${songs.size} canciones",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
+                    Spacer(Modifier.height(18.dp))
 
-
-    AnimatedContent(
-        targetState = isExpanded,
-        label = "song_expanded",
-        transitionSpec = {
-            slideInVertically(initialOffsetY = { it }) + fadeIn() togetherWith
-            slideOutVertically(targetOffsetY = { it }) + fadeOut()
-        }
-    ) { expanded ->
-
-        if(!expanded){
-
-            Column(Modifier.fillMaxSize()) {
-
-                Column(Modifier.padding(15.dp),) {
-
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                        Button(onClick = {
-
-                            stateList.replaceAll{false}
-                            stateList[0] = !stateList[0];
-                            Log.i("OSCAR", "${stateList}")
-                            mediaViewModel.loadAllSongsByTitle();
-                        }, colors = ButtonDefaults.buttonColors(
-                            containerColor = if(stateList[0]) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
-                            contentColor = if(stateList[0]) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                        )) {
-                            Text("Nombre")
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterPill("Nombre", selectedFilter == 0) {
+                            selectedFilter = 0
+                            mediaViewModel.loadAllSongsByTitle()
                         }
-
-                        Button(onClick = {
-                            stateList.replaceAll{false}
-                            stateList[1] = !stateList[1];
-                            Log.i("OSCAR", "${stateList}")
-                            mediaViewModel.loadAllSongsByArtist();
-
-                        },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if(stateList[1]) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
-                                contentColor = if(stateList[1]) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                            )) {
-                            Text("Artista")
+                        FilterPill("Artista", selectedFilter == 1) {
+                            selectedFilter = 1
+                            mediaViewModel.loadAllSongsByArtist()
                         }
-
-                        Button(onClick = {
-                            stateList.replaceAll{false}
-                            stateList[2] = !stateList[2];
-                            Log.i("OSCAR", "${stateList}")
-                            mediaViewModel.loadAllSongs();},
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if(stateList[2]) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
-                                contentColor = if(stateList[2]) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                            )) {
-                            Text("Recientes")
+                        FilterPill("Recientes", selectedFilter == 2) {
+                            selectedFilter = 2
+                            mediaViewModel.loadAllSongs()
                         }
                     }
                 }
 
-                LazyColumn(Modifier
-                    .padding(start = 16.dp, end = 16.dp, top = 5.dp)
-                    .weight(0.8f)) {
-                    itemsIndexed(songs) {index, song ->
+                LazyColumn(
+                    Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
                         MediaSongCard(
-                            modifier = Modifier.clickable(onClick = { mediaViewModel.playSong(song, index) }),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable(onClick = { mediaViewModel.playSong(song, index) }),
                             title = song.title,
                             artist = song.artist,
                             albumArt = song.albumArtPath,
                             duration = song.duration,
-                            isPlaying = if(playerState.currentSong?.title == song.title && playerState.isPlaying) true else false
+                            isPlaying = playerState.currentSong?.path == song.path && playerState.isPlaying
                         )
-
-                        Spacer(Modifier.padding(7.dp))
                     }
                 }
 
-
-
-
-
-
-
-                AnimatedVisibility(
-                    visible = playerState.currentSong != null,
-                    // Efecto de entrada: Aparece desde abajo (300ms) con fundido
-                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                    // Efecto de salida: Se desliza hacia abajo con fundido
-                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-                ) {
-                    Box(Modifier
-                        .padding(5.dp)
-                        .clip(
-                            RoundedCornerShape(
-                                topStart = 20.dp,
-                                topEnd = 20.dp,
-                                bottomStart = 20.dp,
-                                bottomEnd = 20.dp
-                            )
-                        ).clickable(onClick = {
-                            mediaViewModel.setExpanded(true);
-                        })){
-                        PrevMediaSong(playerState, mediaViewModel)
-                    }
-
+        //La barrita se esconde al expandir: este AnimatedVisibility es el que
+        AnimatedVisibility(
+            visible = playerState.currentSong != null && !isExpanded,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = fadeOut()
+        ) {
+            CompositionLocalProvider(LocalPlayerAnimatedScope provides this) {
+                Box(Modifier
+                    .padding(5.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = {
+                        mediaViewModel.setExpanded(true);
+                    })){
+                    PrevMediaSong(playerState, mediaViewModel)
                 }
             }
-
-
-        }else{
-
-
-            Column() {
-                ExpandedPlayerScreen(playerState, mediaViewModel);
-            }
-
         }
-
     }
-
-
 }

@@ -5,13 +5,16 @@ import android.content.Intent
 import android.content.ServiceConnection
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.media3.common.util.Log
 import androidx.media3.common.util.UnstableApi
 import com.oscar.orbimusic.data.audio.DownloadMusicService
 import com.oscar.orbimusic.data.audio.DownloadMusicServiceConnection
+import com.oscar.orbimusic.di.AppModule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 @UnstableApi
 class DownloadViewModel(private val context: Context): ViewModel() {
@@ -43,6 +46,12 @@ class DownloadViewModel(private val context: Context): ViewModel() {
                 _isDownloading.value = !progress.isCompleted
                 if (progress.error != null) {
                     _downloadError.value = progress.error
+                }
+
+                if (progress.isCompleted) {
+                    viewModelScope.launch {
+                        AppModule.scanMusicFiles(context)
+                    }
                 }
             }
         }

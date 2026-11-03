@@ -26,6 +26,9 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE path = :path")
     suspend fun searchByPath(path: String): SongEntity?
 
+    @Query("UPDATE songs SET albumArtPath = :albumArtPath WHERE id = :id")
+    suspend fun updateAlbumArt(id: Long, albumArtPath: String?)
+
     @Query("SELECT * FROM songs ORDER BY artist")
     fun getOrderedByArtist(): Flow<List<SongEntity>>;
 
