@@ -6,15 +6,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,20 +71,49 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
             )
         }
 
-        OutlinedTextField(modifier = Modifier.fillMaxWidth(), value = title, onValueChange = { title = it })
+        TextField(
+            value = title,
+            onValueChange = { title = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp),
+            shape = RoundedCornerShape(12.dp),
+            placeholder = {
+                Text(
+                    text = "Artista, canción o álbum...",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+            ),
+            singleLine = true
+        )
 
-        Column(Modifier.padding(5.dp)) {
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp)) {
             for (elements in chunkedWidgets) {
                 Row {
                     PersonalizedWidget(
-                        modifier = Modifier.weight(1f).padding(2.dp),
+                        modifier = Modifier.weight(1f).padding(4.dp),
                         label = elements[0].label,
                         url = elements[0].url,
                         colors = elements[0].colors
                     )
                     if (elements.size > 1) {
                         PersonalizedWidget(
-                            modifier = Modifier.weight(1f).padding(2.dp),
+                            modifier = Modifier.weight(1f).padding(4.dp),
                             label = elements[1].label,
                             url = elements[1].url,
                             colors = elements[1].colors
@@ -106,7 +139,7 @@ fun PersonalizedWidget(modifier: Modifier = Modifier, label: String, url: String
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(120.dp)
+            .height(105.dp)
             .clip(shape)
             .background(gradient)
             .clickable { print(url) },
