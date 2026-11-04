@@ -19,25 +19,31 @@ import kotlinx.coroutines.launch
 @UnstableApi
 class DownloadViewModel(private val context: Context): ViewModel() {
 
+    // Service para descargar la musica
     private var downloadService: DownloadMusicService? = null;
+    //Conexion del servicio para descargar la muscia
     private lateinit var serviceConnection: DownloadMusicServiceConnection;
 
+    //Flowstate del progreso de la descarga (20...,30...)
     private val _downloadProgress = MutableStateFlow(0);
     val downloadProgress: StateFlow<Int> = _downloadProgress.asStateFlow();
 
+    //Variable que indica si se esta descargando algo
     private val _isDownloading = MutableStateFlow(false);
     val isDownloading: StateFlow<Boolean> = _isDownloading.asStateFlow();
 
+    //Variable en caso de error al descargar
     private val _downloadError = MutableStateFlow<String?>(null);
     val downloadError: StateFlow<String?> = _downloadError.asStateFlow();
 
+    //Cuando se construye la opantalla se conecta automaticamente al servicio de descargas
     init {
         connectToDownloadService();
     }
 
 
 
-
+    //Funcion de conexion al servicio de descargas
     private fun connectToDownloadService() {
         serviceConnection = DownloadMusicServiceConnection { service ->
             downloadService = service
