@@ -17,8 +17,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 //Scopes de la transicion barrita <-> expandido.
-//Son nulos por defecto a proposito: asi los @Preview siguen funcionando
-//sin tener que montar un SharedTransitionLayout alrededor.
 val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { null }
 val LocalPlayerAnimatedScope = compositionLocalOf<AnimatedVisibilityScope?> { null }
 
@@ -36,7 +34,6 @@ private val playerBounds = BoundsTransform { _, _ ->
 }
 
 //Marca el elemento como compartido solo si hay una transicion montada alrededor.
-//Fuera de un SharedTransitionLayout se queda en no-op y el @Preview sigue funcionando.
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Modifier.sharedPlayerElement(key: String): Modifier {
@@ -53,9 +50,6 @@ fun Modifier.sharedPlayerElement(key: String): Modifier {
 }
 
 //Para contenedores que ademas de moverse cambian de contenido.
-//corner = radio de ESTE lado, cornerOther = radio del lado contrario.
-//Hacen falta porque en la capa de overlay el elemento se escapa del clip de su
-//padre: si el radio no viaja con el, se ve cuadrado durante toda la transicion.
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun Modifier.sharedPlayerBounds(
