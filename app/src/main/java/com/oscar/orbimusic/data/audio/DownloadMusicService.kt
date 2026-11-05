@@ -14,6 +14,8 @@ import androidx.annotation.OptIn
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.util.UnstableApi
 import com.oscar.orbimusic.R
+import com.oscar.orbimusic.data.models.DownloadProgress
+import com.oscar.orbimusic.data.models.YtSearchResult
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLException
@@ -24,8 +26,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.log
@@ -51,6 +55,8 @@ class DownloadMusicService: Service() {
         private const val CHANNEL_ID = "music_download_channel"
         // ID de la notificación
         private const val NOTIFICATION_ID = 2
+        //Cuantos resultados se le piden a YouTube por busqueda
+        private const val SEARCH_RESULTS = 20
     }
 
     override fun onCreate() {
@@ -99,6 +105,79 @@ class DownloadMusicService: Service() {
     @OptIn(UnstableApi::class)
     fun setDownloadListener(listener: (DownloadProgress) -> Unit) {
         downloadListener = listener
+    }
+
+
+    //Busca en YouTube y devuelve los resultados, sin descargar nada.
+    suspend fun searchOnYt(query: String): List<YtSearchResult> = withContext(Dispatchers.IO) {
+
+        if (query.isBlank()) return@withContext emptyList()
+
+        try {
+            //Mismo candado que la descarga: sin init() yt-dlp lanza "instance not initialized"
+            if (!isInitialized.await()) {
+                throw Exception("YouTubeDL failed to initialize")
+            }
+
+            val request = YoutubeDLRequest("ytsearch$SEARCH_RESULTS:$query").apply {
+                //--flat-playlist evita que yt-dlp extraiga cada video uno por uno.
+                //Sin esto serian 20 extracciones completas y la busqueda tardaria muchisimo.
+                addOption("--flat-playlist")
+                addOption("--dump-json")
+                addOption("--no-warnings")
+            }
+
+            val result = YoutubeDL.getInstance().execute(request)
+
+            if (result.exitCode != 0) {
+                Log.e("DownloadService", "Busqueda fallida (codigo ${result.exitCode}): ${result.err}")
+                return@withContext emptyList()
+            }
+
+            //--dump-json imprime un JSON por linea, no un array. Se filtran las
+            //lineas que no son JSON porque yt-dlp a veces escribe avisos en stdout.
+            val results = result.out
+                .lineSequence()
+                .map { it.trim() }
+                .filter { it.startsWith("{") }
+                .mapNotNull { parseSearchResult(it) }
+                .toList()
+
+            Log.d("DownloadService", "Busqueda '$query': ${results.size} resultados")
+            results
+
+        } catch (e: Exception) {
+            Log.e("DownloadService", "Error buscando '$query'", e)
+            emptyList()
+        }
+    }
+
+
+    //Convierte una linea de --dump-json en YtSearchResult. Devuelve null si la
+    //linea viene incompleta, para que un resultado roto no tumbe los otros 19.
+    private fun parseSearchResult(line: String): YtSearchResult? {
+        return try {
+            val json = JSONObject(line)
+            val id = json.optString("id").takeIf { it.isNotBlank() } ?: return null
+
+            YtSearchResult(
+                id = id,
+                title = json.optString("title").ifBlank { "Sin titulo" },
+                channel = json.optString("channel")
+                    .ifBlank { json.optString("uploader") }
+                    .ifBlank { "Desconocido" },
+                durationSeconds = json.optDouble("duration", 0.0)
+                    .takeIf { !it.isNaN() }?.toLong() ?: 0L,
+                thumbnailUrl = "https://i.ytimg.com/vi/$id/hqdefault.jpg",
+                url = json.optString("webpage_url")
+                    .ifBlank { json.optString("url") }
+                    .takeIf { it.startsWith("http") }
+                    ?: "https://www.youtube.com/watch?v=$id"
+            )
+        } catch (e: Exception) {
+            Log.w("DownloadService", "Linea de busqueda ilegible, se omite", e)
+            null
+        }
     }
 
 
@@ -304,9 +383,3 @@ class DownloadMusicService: Service() {
 }
 
 
-data class DownloadProgress(
-    val isCompleted: Boolean = false,
-    val error: String? = null,
-    val downloadedPath: String? = null,
-    val progress: Int = 0
-)

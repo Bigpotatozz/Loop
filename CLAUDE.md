@@ -156,13 +156,14 @@ io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1
    - ✅ Crear DownloadMusicService
    - ✅ Integrar con FileScanner
    - ✅ Descargas con metadatos
-3. 🔄 **UI para descargas (PRIORIDAD)**
-   - Crear DownloadScreen con búsqueda
-   - Implementar diálogo de descarga
-   - Mostrar progreso en tiempo real
-4. 🔄 Sistema de favoritos
-5. 🔄 Historial de reproducción
-6. 🔄 Playlists personalizadas
+3. 🔄 **Búsqueda en YouTube (PRIORIDAD)**
+   - ✅ `searchOnYt()` en DownloadMusicService
+   - 🔄 `search()` + `searchResults` en DownloadViewModel
+   - 🔄 Lista de resultados en DownloadScreen con botón de descarga por fila
+4. ⏸️ **Limitar a una descarga a la vez** (pendiente, decidido pero no aplicado)
+5. 🔄 Sistema de favoritos
+6. 🔄 Historial de reproducción
+7. 🔄 Playlists personalizadas
 
 ## 🔧 Notas Técnicas de la Sesión
 
@@ -185,6 +186,35 @@ io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1
 - YouTubeDL no se inicializaba: Agregado `YoutubeDL.getInstance().init()`
 - Metadatos no se incluían: Agregado `--add-metadata` y `--embed-metadata`
 - FFmpeg no estaba inicializado: Descomentado `FFmpeg.getInstance().init()`
+
+### Problemas Conocidos (pendientes)
+
+**Descargas simultáneas se pisan entre sí** — `downloadFromYt` identifica lo que acaba
+de bajar listando la carpeta `Music/` y tomando el `.m4a` más reciente
+(`DownloadMusicService.kt:132`), y hace lo mismo con el `.jpg` de la carátula
+(`DownloadMusicService.kt:152`). Con una sola descarga a la vez es correcto; con
+dos o más, ambas leen el mismo archivo y una de las carátulas nunca se mueve a
+`arthPath/`, así que esa canción se queda sin portada.
+
+Decisión tomada: limitarlo a **una descarga a la vez** con un `Mutex` en
+`downloadFromYt`, en vez de una carpeta de staging. Se aplica después de terminar
+la búsqueda. Lo que hace falta junto con el `Mutex`:
+
+- `isDownloading` nunca se pone en `true`: se calcula desde el callback
+  (`DownloadViewModel.kt:52`) y el callback solo se dispara al terminar o al
+  fallar. `DownloadSong` tiene que marcarlo al arrancar para poder deshabilitar
+  los botones de descarga mientras hay una en curso.
+- `downloadService!!` (`DownloadViewModel.kt:75`) lanza NPE si se toca un botón
+  antes de que el servicio termine de enlazarse.
+
+Hueco que el `Mutex` **no** cubre, aceptado a conciencia: si la app se cierra
+mientras el servicio sigue descargando, al reabrirla `MainActivity.kt:80` escanea
+y puede indexar un `.m4a` a medias. Como `searchByPath` después lo da por
+"repetida sin cambios" (`FileScanner.kt:56`), queda mal permanentemente. Esto sí
+lo arreglaría la carpeta de staging.
+
+**Código muerto:** el bloque de `MediaMetadataRetriever` en
+`DownloadMusicService.kt:140-143` extrae `audioTitle` y nunca lo usa.
 
 ## 🐛 Notas Técnicas Importantes
 
