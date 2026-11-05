@@ -3,6 +3,7 @@ package com.oscar.orbimusic.presentation.ui.components
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,12 +37,23 @@ import com.oscar.orbimusic.data.models.YtSearchResult
 import com.oscar.orbimusic.presentation.ui.theme.OrbiMusicTheme
 import com.oscar.orbimusic.presentation.utils.parseTime
 
+//En que punto de la descarga esta esta fila
+sealed interface DownloadRowState {
+    //Sin descargar: se muestra el boton
+    data object Idle : DownloadRowState
+    //Se lanzo pero yt-dlp aun no reporta porcentaje: spinner indeterminado
+    data object Starting : DownloadRowState
+    data class Running(val percent: Int) : DownloadRowState
+    data object Done : DownloadRowState
+}
+
 //Fila de un resultado de busqueda de YouTube.
 @Composable
 fun SearchResultCard(
     modifier: Modifier = Modifier,
     result: YtSearchResult,
     onDownload: () -> Unit,
+    state: DownloadRowState = DownloadRowState.Idle,
     downloadEnabled: Boolean = true
 ) {
     Row(
@@ -87,15 +101,50 @@ fun SearchResultCard(
 
         Spacer(Modifier.width(8.dp))
 
-        IconButton(onClick = onDownload, enabled = downloadEnabled) {
-            Icon(
-                imageVector = Icons.Rounded.Download,
-                contentDescription = "Descargar ${result.title}",
-                //secondary es la tinta de alto contraste en este tema;
-                //primary es el color de fondo, no un acento
-                tint = if (downloadEnabled) MaterialTheme.colorScheme.secondary
-                else MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        //Tamaño fijo para que la fila no se mueva al cambiar de estado,
+        //igual que el Box de ancho fijo de MediaSongCard
+        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            //secondary es la tinta de alto contraste en este tema;
+            //primary es el color de fondo, no un acento
+            val accent = MaterialTheme.colorScheme.secondary
+
+            when (state) {
+                DownloadRowState.Idle -> {
+                    IconButton(onClick = onDownload, enabled = downloadEnabled) {
+                        Icon(
+                            imageVector = Icons.Rounded.Download,
+                            contentDescription = "Descargar ${result.title}",
+                            tint = if (downloadEnabled) accent
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                DownloadRowState.Starting -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = accent
+                    )
+                }
+
+                is DownloadRowState.Running -> {
+                    CircularProgressIndicator(
+                        progress = { state.percent / 100f },
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = accent
+                    )
+                }
+
+                DownloadRowState.Done -> {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = "Descargada",
+                        tint = accent
+                    )
+                }
+            }
         }
     }
 }
@@ -111,6 +160,7 @@ fun SearchResultCardPreview() {
                 .background(MaterialTheme.colorScheme.primary)
                 .padding(vertical = 12.dp)
         ) {
+            //Un estado por fila para poder compararlos de un vistazo
             SearchResultCard(
                 result = YtSearchResult(
                     id = "1",
@@ -120,11 +170,36 @@ fun SearchResultCardPreview() {
                     thumbnailUrl = "",
                     url = ""
                 ),
-                onDownload = {}
+                onDownload = {},
+                state = DownloadRowState.Idle
             )
             SearchResultCard(
                 result = YtSearchResult(
                     id = "2",
+                    title = "Arrancando, todavía sin porcentaje",
+                    channel = "Canal",
+                    durationSeconds = 180,
+                    thumbnailUrl = "",
+                    url = ""
+                ),
+                onDownload = {},
+                state = DownloadRowState.Starting
+            )
+            SearchResultCard(
+                result = YtSearchResult(
+                    id = "3",
+                    title = "Descargando a la mitad",
+                    channel = "Canal",
+                    durationSeconds = 240,
+                    thumbnailUrl = "",
+                    url = ""
+                ),
+                onDownload = {},
+                state = DownloadRowState.Running(55)
+            )
+            SearchResultCard(
+                result = YtSearchResult(
+                    id = "4",
                     title = "Un título muy largo que no cabe en una sola línea y tiene que cortarse",
                     channel = "Canal con nombre largo",
                     durationSeconds = 3725,
@@ -132,7 +207,7 @@ fun SearchResultCardPreview() {
                     url = ""
                 ),
                 onDownload = {},
-                downloadEnabled = false
+                state = DownloadRowState.Done
             )
         }
     }

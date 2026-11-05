@@ -26,9 +26,19 @@ class DownloadViewModel(private val context: Context): ViewModel() {
     //Conexion del servicio para descargar la muscia
     private lateinit var serviceConnection: DownloadMusicServiceConnection;
 
-    //Flowstate del progreso de la descarga (20...,30...)
-    private val _downloadProgress = MutableStateFlow(0);
+    //Flowstate del progreso de la descarga (20...,30...). Vale -1 mientras
+    //yt-dlp todavia no reporta nada, que la fila pinta como indeterminado.
+    private val _downloadProgress = MutableStateFlow(-1);
     val downloadProgress: StateFlow<Int> = _downloadProgress.asStateFlow();
+
+    //Que cancion se esta descargando. Sin esto el progreso no se puede mapear
+    //a su fila en la lista de resultados.
+    private val _downloadingId = MutableStateFlow<String?>(null);
+    val downloadingId: StateFlow<String?> = _downloadingId.asStateFlow();
+
+    //Ids ya descargados, para pintarles la palomita
+    private val _completedDownloads = MutableStateFlow<Set<String>>(emptySet());
+    val completedDownloads: StateFlow<Set<String>> = _completedDownloads.asStateFlow();
 
     //Variable que indica si se esta descargando algo
     private val _isDownloading = MutableStateFlow(false);
@@ -61,15 +71,31 @@ class DownloadViewModel(private val context: Context): ViewModel() {
         serviceConnection = DownloadMusicServiceConnection { service ->
             downloadService = service
             service.setDownloadListener { progress ->
-                _downloadProgress.value = progress.progress
-                _isDownloading.value = !progress.isCompleted
-                if (progress.error != null) {
-                    _downloadError.value = progress.error
-                }
+                when {
+                    progress.error != null -> {
+                        _downloadError.value = progress.error
+                        _downloadingId.value = null
+                        _isDownloading.value = false
+                    }
 
-                if (progress.isCompleted) {
-                    viewModelScope.launch {
-                        AppModule.scanMusicFiles(context)
+                    progress.isCompleted -> {
+                        //La palomita se dispara aqui y no cuando el progreso
+                        //llegue a 100: yt-dlp se queda en 99 durante FFmpeg y
+                        //nunca reporta el 100
+                        _completedDownloads.value =
+                            _completedDownloads.value + progress.videoId
+                        _downloadingId.value = null
+                        _isDownloading.value = false
+
+                        viewModelScope.launch {
+                            AppModule.scanMusicFiles(context)
+                        }
+                    }
+
+                    else -> {
+                        _downloadingId.value = progress.videoId
+                        _downloadProgress.value = progress.progress
+                        _isDownloading.value = true
                     }
                 }
             }
@@ -113,10 +139,23 @@ class DownloadViewModel(private val context: Context): ViewModel() {
         searchJob?.cancel();
         _searchResults.value = emptyList();
         _isSearching.value = false;
+        //Las palomitas viven mientras la lista este en pantalla
+        _completedDownloads.value = emptySet();
     }
 
-    fun DownloadSong(url: String, title: String){
-        downloadService!!.downloadFromYt(url, title);
+    fun DownloadSong(videoId: String, url: String, title: String){
+        //Antes era downloadService!!, que tiraba NPE si se tocaba un boton
+        //antes de que el servicio terminara de enlazarse
+        val service = downloadService ?: return;
+
+        //Se siembra el estado aqui y no se espera al callback: el servicio
+        //puede tardar en reportar, y mientras tanto la fila ya debe mostrar
+        //el spinner y los demas botones quedar deshabilitados
+        _downloadingId.value = videoId;
+        _downloadProgress.value = -1;
+        _isDownloading.value = true;
+
+        service.downloadFromYt(videoId, url, title);
     }
 
 
