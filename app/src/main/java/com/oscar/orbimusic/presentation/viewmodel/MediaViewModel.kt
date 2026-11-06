@@ -31,8 +31,6 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class MediaViewModel (private val songRepository: SongRepository,
                       private val context: Context): ViewModel() {
-
-
     private var audioService: AudioPlayerService? = null;
     private lateinit var serviceConnection: AudioServiceConnection;
     private val _playerState = MutableStateFlow(PlayerState())
