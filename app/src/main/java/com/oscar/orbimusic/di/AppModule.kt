@@ -41,7 +41,7 @@ object AppModule {
         songDatabaseInit.playHistoryDao();
     };
     private val songRepository: SongRepository by lazy {
-        SongRepositoryImpl(songDao, favoritesDao, playlistDao);
+        SongRepositoryImpl(songDao, favoritesDao, playlistDao, playHistoryDao);
     };
 
 

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.oscar.orbimusic.data.audio.AudioPlayerService
 import com.oscar.orbimusic.data.audio.AudioServiceConnection
+import com.oscar.orbimusic.data.local.database.PlaySource
 import com.oscar.orbimusic.domain.model.PlayerState
 import com.oscar.orbimusic.domain.model.Playlist
 import com.oscar.orbimusic.domain.model.PlaylistSelection
@@ -76,6 +77,44 @@ class MediaViewModel (private val songRepository: SongRepository,
         _isExpanded.value = status;
     };
 
+    private data class PendingPlay(
+        val songId: Long,
+        val durationMs: Long,
+        val shuffle: Boolean,
+        val source: String
+    )
+
+    private var pendingPlay: PendingPlay? = null
+
+    private fun openPlay(song: Song, source: String) {
+        pendingPlay = PendingPlay(
+            songId = song.id,
+            durationMs = song.duration,
+            shuffle = _shuffle.value,
+            source = source
+        )
+    }
+
+    private fun closePlay(msPlayed: Long) {
+        val play = pendingPlay ?: return
+        pendingPlay = null
+
+        if (msPlayed <= 0) return
+
+        viewModelScope.launch {
+            songRepository.recordPlay(
+                songId = play.songId,
+                msPlayed = msPlayed,
+                shuffle = play.shuffle,
+                source = play.source
+            )
+        }
+    }
+
+    private fun closePlayAtCurrentPosition() {
+        closePlay(audioService?.getCurrentPosition() ?: 0L)
+    }
+
 
 
 
@@ -104,6 +143,15 @@ class MediaViewModel (private val songRepository: SongRepository,
             callback = { service ->
                 audioService = service
                 service.setPlayerStateListener { isPlaying, index ->
+                    val queue = _playerState.value.queue
+                    val newSong = queue.getOrNull(index)
+                    val pending = pendingPlay
+
+                    if (newSong != null && pending != null && pending.songId != newSong.id) {
+                        closePlay(pending.durationMs)
+                        openPlay(newSong, pending.source)
+                    }
+
                     _playerState.update { currentState ->
                         currentState.copy(
                             isPlaying = isPlaying,
@@ -259,9 +307,10 @@ class MediaViewModel (private val songRepository: SongRepository,
 
 
     //Reproduce una lista cualquiera como cola.
-    fun playSongs(songs: List<Song>, index: Int = 0) {
+    fun playSongs(songs: List<Song>, index: Int = 0, source: String = PlaySource.LIBRARY) {
         if (songs.isEmpty()) return
         val safeIndex = index.coerceIn(0, songs.lastIndex)
+        closePlayAtCurrentPosition()
 
         _playerState.update { currentState ->
             currentState.copy(
@@ -276,10 +325,9 @@ class MediaViewModel (private val songRepository: SongRepository,
 
         audioService?.setPlaylist(songs, safeIndex)
         audioService?.play()
+
+        openPlay(songs[safeIndex], source)
     }
-
-
-    //Borra la cancion del dispositivo.
     fun deleteSong(song: Song) {
         viewModelScope.launch {
             if (_playerState.value.currentSong?.path == song.path) {
@@ -290,7 +338,10 @@ class MediaViewModel (private val songRepository: SongRepository,
     }
 
 
-    fun playSong(song: Song?, index: Int = 0) {
+    fun playSong(song: Song?, index: Int = 0, source: String = PlaySource.LIBRARY) {
+        //Igual que en playSongs: la posicion se lee antes del cambio
+        closePlayAtCurrentPosition()
+
         _playerState.update { currentState ->
             currentState.copy(
                 currentSong = song,
@@ -304,6 +355,8 @@ class MediaViewModel (private val songRepository: SongRepository,
 
         audioService?.setPlaylist(_allSongs.value, index)
         audioService?.play()
+
+        song?.let { openPlay(it, source) }
     }
 
     fun pauseSong() {
@@ -395,6 +448,8 @@ class MediaViewModel (private val songRepository: SongRepository,
 
     override fun onCleared() {
         super.onCleared()
+        //Sin esto se pierde siempre la ultima reproduccion de cada sesion
+        closePlayAtCurrentPosition()
         context.unbindService(serviceConnection)
     }
 

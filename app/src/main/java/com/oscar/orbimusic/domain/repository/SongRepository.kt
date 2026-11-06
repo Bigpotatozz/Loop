@@ -13,6 +13,13 @@ interface SongRepository {
 
     suspend fun deleteSong(song: Song): Boolean;
 
+    suspend fun recordPlay(
+        songId: Long,
+        msPlayed: Long,
+        shuffle: Boolean,
+        source: String
+    );
+
 
     // ----- Favoritos -----
 

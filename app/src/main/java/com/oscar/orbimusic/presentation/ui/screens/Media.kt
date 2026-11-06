@@ -79,6 +79,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
+import com.oscar.orbimusic.data.local.database.PlaySource
 import com.oscar.orbimusic.domain.model.PlaylistSelection
 import com.oscar.orbimusic.domain.model.PlaylistSummary
 import com.oscar.orbimusic.domain.model.Song
@@ -980,19 +981,24 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                     //SEGUNDO NIVEL: las canciones de la playlist abierta
                     if (openSummary != null) {
 
+                        val playSource = openSummary.id
+                            ?.let { PlaySource.playlist(it) }
+                            ?: PlaySource.FAVORITES
+
                         item(key = "detail-header") {
                             PlaylistDetailHeader(
                                 summary = openSummary,
                                 songs = branchSongs,
                                 onBack = { mediaViewModel.closePlaylist() },
-                                onPlay = { mediaViewModel.playSongs(branchSongs, 0) },
+                                onPlay = {
+                                    mediaViewModel.playSongs(branchSongs, 0, playSource)
+                                },
                                 onShuffle = {
-                                    //Se activa el modo y se arranca en una al
-                                    //azar; playNext ya respeta el shuffle
                                     mediaViewModel.setShuffle(true)
                                     mediaViewModel.playSongs(
                                         branchSongs,
-                                        Random.nextInt(branchSongs.size)
+                                        Random.nextInt(branchSongs.size),
+                                        playSource
                                     )
                                 }
                             )
@@ -1028,7 +1034,9 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                                             .clip(RoundedCornerShape(10.dp))
                                             .background(MaterialTheme.colorScheme.primary)
                                             .clickable(onClick = {
-                                                mediaViewModel.playSongs(branchSongs, index)
+                                                mediaViewModel.playSongs(
+                                                    branchSongs, index, playSource
+                                                )
                                             }),
                                         title = song.title,
                                         artist = song.artist,

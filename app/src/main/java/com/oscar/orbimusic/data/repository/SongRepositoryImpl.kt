@@ -2,6 +2,8 @@ package com.oscar.orbimusic.data.repository
 
 import com.oscar.orbimusic.data.local.database.FavoritesDao
 import com.oscar.orbimusic.data.local.database.FavoritesEntity
+import com.oscar.orbimusic.data.local.database.PlayHistoryDao
+import com.oscar.orbimusic.data.local.database.PlayHistoryEntity
 import com.oscar.orbimusic.data.local.database.PlaylistDao
 import com.oscar.orbimusic.data.local.database.PlaylistEntity
 import com.oscar.orbimusic.data.local.database.PlaylistWithCount
@@ -21,7 +23,8 @@ import java.io.File
 class SongRepositoryImpl(
     private val songDao: SongDao,
     private val favoritesDao: FavoritesDao,
-    private val playlistDao: PlaylistDao
+    private val playlistDao: PlaylistDao,
+    private val playHistoryDao: PlayHistoryDao
 ): SongRepository{
 
     override fun getAllSongs(): Flow<List<Song>> {
@@ -62,6 +65,23 @@ class SongRepositoryImpl(
         //El CASCADE de favorites y playlistDetalle hace el resto
         songDao.deleteSongById(song.id)
         true
+    }
+
+
+    override suspend fun recordPlay(
+        songId: Long,
+        msPlayed: Long,
+        shuffle: Boolean,
+        source: String
+    ) {
+        playHistoryDao.record(
+            PlayHistoryEntity(
+                songId = songId,
+                msPlayed = msPlayed,
+                shuffle = shuffle,
+                source = source
+            )
+        )
     }
 
 
