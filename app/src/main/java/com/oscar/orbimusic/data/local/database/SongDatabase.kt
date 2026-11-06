@@ -7,14 +7,21 @@ import androidx.room.RoomDatabase
 
 
 @Database(
-    entities = [SongEntity::class], //Lista de tablas de la bd
-    version = 1,
+    entities = [
+        SongEntity::class,
+        FavoritesEntity::class,
+        PlaylistEntity::class,
+        PlayListDetalle::class
+    ],
+    version = 2,
     exportSchema = false //Si esta en true guarda en un archivo el schema
 )
 abstract class SongDatabase: RoomDatabase() {
 
     //Retorna el Dao
     abstract fun songDao(): SongDao;
+    abstract fun favoritesDao(): FavoritesDao;
+    abstract fun playlistDao(): PlaylistDao;
 
     //En un companion object se puede meter codigo estatico para no crear una instancia
     companion object {
