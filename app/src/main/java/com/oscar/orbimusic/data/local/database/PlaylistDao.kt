@@ -12,19 +12,21 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface PlaylistDao {
 
+    //Obtiene todas las playlist registradas
     @Query("SELECT * FROM playlist ORDER BY createdAt DESC")
     fun getAllPlaylists(): Flow<List<PlaylistEntity>>
 
-
+    //Cuenta las canciones de x playlist
     @Query("SELECT COUNT(*) FROM playlistDetalle WHERE idPlaylist = :idPlaylist")
     fun countSongs(idPlaylist: Long): Flow<Int>
-
+    //Crea una playlist nueva
     @Insert
     suspend fun createPlaylist(playlist: PlaylistEntity): Long
-
+    //Elimina una playlist
     @Query("DELETE FROM playlist WHERE idPlaylist = :idPlaylist")
     suspend fun deletePlaylist(idPlaylist: Long)
 
+    //Obtiene las canciones de la playlist
     @Query("""
         SELECT songs.* FROM songs
         INNER JOIN playlistDetalle ON songs.id = playlistDetalle.songId
@@ -33,12 +35,15 @@ interface PlaylistDao {
     """)
     fun getPlaylistSongs(idPlaylist: Long): Flow<List<SongEntity>>
 
+    //Obtiene la siguiente cancion registrada en bd en base a un indice
     @Query("SELECT COALESCE(MAX(position), -1) + 1 FROM playlistDetalle WHERE idPlaylist = :idPlaylist")
     suspend fun nextPosition(idPlaylist: Long): Int
 
+    //Agrega una cancion a una playlist ya existente
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addSongToPlaylist(detalle: PlayListDetalle)
 
+    //Transaccion para evitar duplicados en llamadas muy rapidas
     @Transaction
     suspend fun appendSong(idPlaylist: Long, songId: Long) {
         addSongToPlaylist(
@@ -49,10 +54,11 @@ interface PlaylistDao {
             )
         )
     }
-
+    //Elimina una cancion de una playlist
     @Query("DELETE FROM playlistDetalle WHERE idPlaylist = :idPlaylist AND songId = :songId")
     suspend fun removeSongFromPlaylist(idPlaylist: Long, songId: Long)
 
+    //Actualiza la posicion de una playlist
     @Query("UPDATE playlistDetalle SET position = :position WHERE idPlaylist = :idPlaylist AND songId = :songId")
     suspend fun updatePosition(idPlaylist: Long, songId: Long, position: Int)
 }
