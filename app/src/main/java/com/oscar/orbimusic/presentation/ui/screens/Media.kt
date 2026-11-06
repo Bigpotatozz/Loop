@@ -24,17 +24,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -45,10 +48,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.oscar.orbimusic.presentation.ui.animations.LocalPlayerAnimatedScope
 import com.oscar.orbimusic.presentation.ui.components.MediaSongCard
 import com.oscar.orbimusic.presentation.ui.components.PrevMediaSong
@@ -132,40 +139,128 @@ private fun NewPlaylistRow(onClick: () -> Unit) {
     }
 }
 
-//El texto vive dentro del dialogo: al cerrarse se va con el, y no hay que
-//acordarse de limpiarlo desde la pantalla.
+//Dialog crudo en lugar de AlertDialog: el de Material impone su propio
+//encabezado, tipografia y fila de botones, y se veia ajeno al resto. Aqui el
+//encabezado usa el mismo estilo que "Biblioteca", el campo el del buscador de
+//la pantalla de descargas, y el boton la forma de una pildora de filtro activa.
+//El texto vive dentro del dialogo: al cerrarse se va con el.
 @Composable
 private fun CreatePlaylistDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Nueva playlist") },
-        text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                singleLine = true,
-                placeholder = { Text("Nombre") }
-            )
-        },
-        confirmButton = {
-            TextButton(
-                //Deshabilitado mientras este en blanco: una playlist sin nombre
-                //no se podria distinguir en la lista
-                enabled = name.isNotBlank(),
-                onClick = { onConfirm(name.trim()) }
-            ) {
-                Text("Crear")
+    //El dialogo existe para escribir un nombre: el teclado deberia estar listo
+    //sin que el usuario tenga que tocar el campo
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.primary
+        ) {
+            Column(Modifier.padding(24.dp)) {
+
+                Text(
+                    text = "Nueva playlist",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.5).sp
+                    )
+                )
+
+                Spacer(Modifier.height(2.dp))
+
+                Text(
+                    text = "Ponle un nombre para reconocerla después",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(Modifier.height(18.dp))
+
+                TextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
+                    shape = RoundedCornerShape(12.dp),
+                    placeholder = {
+                        Text(
+                            text = "Mis rolas",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                    ),
+                    //La tecla del teclado tambien crea, para no obligar a
+                    //cerrarlo antes de poder tocar el boton
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = {
+                        if (name.isNotBlank()) onConfirm(name.trim())
+                    }),
+                    singleLine = true
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Cancelar",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(100))
+                            .clickable(onClick = onDismiss)
+                            .padding(horizontal = 16.dp, vertical = 9.dp)
+                    )
+
+                    Spacer(Modifier.width(8.dp))
+
+                    //Misma forma y colores que una FilterPill seleccionada.
+                    //En blanco no se puede crear: una playlist sin nombre no se
+                    //podria distinguir en la lista.
+                    val enabled = name.isNotBlank()
+                    Text(
+                        text = "Crear",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = if (enabled) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(100))
+                            .background(
+                                if (enabled) MaterialTheme.colorScheme.secondary
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .clickable(enabled = enabled) { onConfirm(name.trim()) }
+                            .padding(horizontal = 20.dp, vertical = 9.dp)
+                    )
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
         }
-    )
+    }
 }
 
 //Encabezado de cada bloque de la vista agrupada
