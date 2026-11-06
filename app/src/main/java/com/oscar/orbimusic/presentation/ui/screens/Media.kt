@@ -335,19 +335,93 @@ private fun PlaylistCoverMosaic(
     }
 }
 
+@Composable
+private fun DeletePlaylistDialog(
+    name: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.primary
+        ) {
+            Column(Modifier.padding(24.dp)) {
+
+                Text(
+                    text = "¿Eliminar \"$name\"?",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.5).sp
+                    )
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+                Text(
+                    text = "La playlist se borra y no se puede recuperar. Tus canciones no se tocan.",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Cancelar",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(100))
+                            .clickable(onClick = onDismiss)
+                            .padding(horizontal = 16.dp, vertical = 9.dp)
+                    )
+
+                    Spacer(Modifier.width(8.dp))
+
+                    //Rojo y no la tinta de siempre: es la accion destructiva
+                    Text(
+                        text = "Eliminar",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color.White,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(100))
+                            .background(FavoriteRed)
+                            .clickable(onClick = onConfirm)
+                            .padding(horizontal = 20.dp, vertical = 9.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
 
 //Envuelve una fila para poder quitarla deslizando hacia la izquierda
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeToRemove(
     onRemove: () -> Unit,
+    enabled: Boolean = true,
+    label: String = "Quitar",
+    dismissOnSwipe: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val state = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             if (value == SwipeToDismissBoxValue.EndToStart) {
                 onRemove()
-                true
+                dismissOnSwipe
             } else {
                 false
             }
@@ -357,6 +431,7 @@ private fun SwipeToRemove(
     SwipeToDismissBox(
         state = state,
         enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = enabled,
         backgroundContent = {
             if (state.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
                 Box(
@@ -376,7 +451,7 @@ private fun SwipeToRemove(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "Quitar",
+                            text = label,
                             style = MaterialTheme.typography.labelLarge.copy(
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium
@@ -584,6 +659,7 @@ private fun PlaylistSummaryRow(
             .fillMaxWidth()
             .heightIn(min = 72.dp)
             .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.primary)
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -666,6 +742,20 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
     val topLevelListState = rememberLazyListState()
 
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
+
+    //Cual playlist se esta por borrar. Null = ningun dialogo abierto.
+    var playlistToDelete by remember { mutableStateOf<PlaylistSummary?>(null) }
+
+    playlistToDelete?.let { target ->
+        DeletePlaylistDialog(
+            name = target.name,
+            onDismiss = { playlistToDelete = null },
+            onConfirm = {
+                target.id?.let { mediaViewModel.deletePlaylist(it) }
+                playlistToDelete = null
+            }
+        )
+    }
 
     if (showCreateDialog) {
         CreatePlaylistDialog(
@@ -873,15 +963,23 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                         }
 
                         items(playlistSummaries, key = { it.id ?: -1L }) { summary ->
-                            PlaylistSummaryRow(
-                                summary = summary,
-                                onClick = {
-                                    mediaViewModel.openPlaylist(
-                                        if (summary.id == null) PlaylistSelection.Favorites
-                                        else PlaylistSelection.Real(summary.id)
-                                    )
-                                }
-                            )
+                            SwipeToRemove(
+                                
+                                enabled = summary.id != null,
+                                label = "Eliminar",
+                                dismissOnSwipe = false,
+                                onRemove = { playlistToDelete = summary }
+                            ) {
+                                PlaylistSummaryRow(
+                                    summary = summary,
+                                    onClick = {
+                                        mediaViewModel.openPlaylist(
+                                            if (summary.id == null) PlaylistSelection.Favorites
+                                            else PlaylistSelection.Real(summary.id)
+                                        )
+                                    }
+                                )
+                            }
                         }
 
                     } else {
