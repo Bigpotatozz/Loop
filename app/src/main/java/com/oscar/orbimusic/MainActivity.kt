@@ -89,9 +89,6 @@ class MainActivity : ComponentActivity() {
 
         AppModule.initialize(this)
 
-        //Se los pedimos al ViewModelStore de la Activity, que es lo que Android
-        //conserva al recrearla. Si ya existen los reutiliza; si no, los crea con
-        //la factory. Antes se construian a mano y se perdian al cambiar el tema.
         val mediaViewModel: MediaViewModel =
             ViewModelProvider(this, AppModule.mediaViewModelFactory)[MediaViewModel::class.java]
         val downloadViewModel: DownloadViewModel =
@@ -110,11 +107,7 @@ class MainActivity : ComponentActivity() {
                 android.Manifest.permission.WRITE_EXTERNAL_STORAGE
             ))
         }
-
-
-
-        //auto() elige el velo segun el modo del sistema. El primer color es para
-        //tema claro y el segundo para oscuro, y deben casar con el terciario.
+        
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
                 android.graphics.Color.TRANSPARENT,
