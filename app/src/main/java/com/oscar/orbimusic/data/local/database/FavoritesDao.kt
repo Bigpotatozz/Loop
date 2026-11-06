@@ -24,9 +24,8 @@ interface FavoritesDao {
     //Obtiene todas las canciones favoritas (solo ids)
     @Query("SELECT songId FROM favorites")
     fun getFavoriteIds(): Flow<List<Long>>
-    //Agrega una cancion a favoritos
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun addFavorite(favorite: FavoritesEntity)
+    suspend fun addFavorite(favorite: FavoritesEntity): Long
     //Elimina de favoritos
     @Query("DELETE FROM favorites WHERE songId = :songId")
     suspend fun removeFavorite(songId: Long)

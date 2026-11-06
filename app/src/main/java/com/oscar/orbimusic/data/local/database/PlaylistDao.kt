@@ -1,11 +1,20 @@
 package com.oscar.orbimusic.data.local.database
 
 import androidx.room.Dao
+import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
+
+
+//Una playlist junto con cuantas canciones tiene. @Embedded le dice a Room que
+//las columnas de playlist se mapean a PlaylistEntity, y songCount aparte.
+data class PlaylistWithCount(
+    @Embedded val playlist: PlaylistEntity,
+    val songCount: Int
+)
 
 
 //INTERFACE DONDE SE EJECUTAN LAS ACCIONES SOBRE PLAYLISTS Y SU DETALLE
@@ -15,6 +24,15 @@ interface PlaylistDao {
     //Obtiene todas las playlist registradas
     @Query("SELECT * FROM playlist ORDER BY createdAt DESC")
     fun getAllPlaylists(): Flow<List<PlaylistEntity>>
+
+    @Query("""
+        SELECT playlist.*, COUNT(playlistDetalle.songId) AS songCount
+        FROM playlist
+        LEFT JOIN playlistDetalle ON playlist.idPlaylist = playlistDetalle.idPlaylist
+        GROUP BY playlist.idPlaylist
+        ORDER BY playlist.createdAt DESC
+    """)
+    fun getAllPlaylistsWithCount(): Flow<List<PlaylistWithCount>>
 
     //Cuenta las canciones de x playlist
     @Query("SELECT COUNT(*) FROM playlistDetalle WHERE idPlaylist = :idPlaylist")
@@ -61,4 +79,11 @@ interface PlaylistDao {
     //Actualiza la posicion de una playlist
     @Query("UPDATE playlistDetalle SET position = :position WHERE idPlaylist = :idPlaylist AND songId = :songId")
     suspend fun updatePosition(idPlaylist: Long, songId: Long, position: Int)
+
+    @Transaction
+    suspend fun reorder(idPlaylist: Long, songIdsInOrder: List<Long>) {
+        songIdsInOrder.forEachIndexed { index, songId ->
+            updatePosition(idPlaylist, songId, index)
+        }
+    }
 }
