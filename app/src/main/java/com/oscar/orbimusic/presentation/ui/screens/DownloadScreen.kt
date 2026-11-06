@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,11 +24,15 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -38,6 +43,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +61,7 @@ import com.oscar.orbimusic.presentation.ui.components.DownloadRowState
 import com.oscar.orbimusic.presentation.ui.components.SearchResultCard
 import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 //Tiempos de la entrada en cascada de los resultados
 private const val STAGGER_STEP_MS = 40L      // retraso entre una fila y la siguiente
@@ -76,6 +83,9 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
     //Para esconder el teclado al lanzar la busqueda y dejar ver los resultados
     val keyboardController = LocalSoftwareKeyboardController.current
     var hasSearched by remember { mutableStateOf(false) }
+    var urlInput by remember { mutableStateOf("") }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     
     DisposableEffect(Unit) {
         onDispose { downloadViewModel.clearSearch() }
@@ -94,6 +104,7 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
 
     val chunkedWidgets = widgetsList.chunked(2)
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize()) {
         Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp, bottom = 16.dp)) {
             Text(
@@ -165,6 +176,67 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
             }),
             singleLine = true
         )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp)
+                .padding(top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            TextField(
+                value = urlInput,
+                onValueChange = { urlInput = it },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                placeholder = {
+                    Text(
+                        text = "Pegar URL de YouTube...",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                trailingIcon = {
+                    if (urlInput.isNotEmpty()) {
+                        IconButton(onClick = { urlInput = "" }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = "Limpiar URL",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                keyboardActions = KeyboardActions(onGo = {
+                    if (urlInput.isNotBlank()) {
+                        downloadViewModel.downloadFromUrl(urlInput)
+                        urlInput = ""
+                        keyboardController?.hide()
+                    }
+                }),
+                singleLine = true
+            )
+            FilledIconButton(
+                onClick = {
+                    downloadViewModel.downloadFromUrl(urlInput)
+                    urlInput = ""
+                    keyboardController?.hide()
+                    scope.launch { snackbarHostState.showSnackbar("Descarga iniciada") }
+                },
+                enabled = urlInput.isNotBlank() && !isDownloading
+            ) {
+                Icon(Icons.Rounded.Download, contentDescription = "Descargar URL")
+            }
+        }
 
         when {
             isSearching -> {
@@ -292,6 +364,11 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
             }
         }
     }
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.BottomCenter)
+    )
+    } // Box
 }
 
 class Widget(val label: String, val colors: List<Color>)

@@ -95,11 +95,20 @@ class DownloadMusicService: Service() {
             try{
                 YoutubeDL.getInstance().init(applicationContext)
                 FFmpeg.getInstance().init(applicationContext)
-                // Se marca como inicializado después de init()
                 isInitialized.complete(true)
 
-                YoutubeDL.getInstance().updateYoutubeDL(this@DownloadMusicService)
-                Log.d("DownloadService", "YouTubeDL initialized and updated")
+                //Solo actualiza si han pasado mas de 24h desde la ultima vez,
+                //evita el delay en cada apertura de pantalla
+                val prefs = applicationContext.getSharedPreferences("ytdl", MODE_PRIVATE)
+                val lastUpdate = prefs.getLong("last_update", 0L)
+                val oneDayMs = 24 * 60 * 60 * 1000L
+                if (System.currentTimeMillis() - lastUpdate > oneDayMs) {
+                    YoutubeDL.getInstance().updateYoutubeDL(this@DownloadMusicService)
+                    prefs.edit().putLong("last_update", System.currentTimeMillis()).apply()
+                    Log.d("DownloadService", "YouTubeDL actualizado")
+                } else {
+                    Log.d("DownloadService", "YouTubeDL al dia, se omite actualizacion")
+                }
             }catch (e: YoutubeDLException){
                 Log.e("DownloadService", "$e", e)
                 if (!isInitialized.isCompleted) isInitialized.complete(false)
