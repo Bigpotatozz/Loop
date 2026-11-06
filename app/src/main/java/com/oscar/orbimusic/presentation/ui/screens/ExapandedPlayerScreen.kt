@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
@@ -47,7 +48,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +73,7 @@ import com.oscar.orbimusic.domain.model.PlayerState
 import com.oscar.orbimusic.presentation.ui.animations.PlayerArtKey
 import com.oscar.orbimusic.presentation.ui.animations.PlayerContainerKey
 import com.oscar.orbimusic.presentation.ui.animations.PlayerTitleKey
+import com.oscar.orbimusic.presentation.ui.components.AddToPlaylistDialog
 import com.oscar.orbimusic.presentation.ui.components.AlbumArtPlaceholder
 import com.oscar.orbimusic.presentation.ui.theme.FavoriteRed
 import com.oscar.orbimusic.presentation.ui.theme.PlayerInk
@@ -84,8 +88,6 @@ import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
 private enum class PlayerDrag { Open, Dismissed }
 
 
-//Boton circular con area de toque accesible. El del mini-player esta fijado a 44/24dp
-//y vive en otro archivo, asi que aqui lleva sus propias medidas.
 @Composable
 private fun PlayerIconButton(
     icon: ImageVector,
@@ -125,6 +127,12 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
 
     val favoriteIds by mediaViewModel.favoriteIds.collectAsState()
     val isFavorite = song != null && song.id in favoriteIds
+
+    //playlistGroups ya trae las canciones de cada lista, asi que el selector
+    //puede marcar cuales contienen esta cancion sin ninguna consulta extra
+    val playlistGroups by mediaViewModel.playlistGroups.collectAsState()
+    //remember y no rememberSaveable: el expandido se cierra al rotar de todos modos
+    var showPlaylistPicker by remember { mutableStateOf(false) }
 
     //El expandido no sigue al tema: es oscuro en claro y en oscuro. La caratula
   
@@ -238,16 +246,27 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                     onClick = { mediaViewModel.setExpanded(false) }
                 )
 
-                PlayerIconButton(
-                    icon = if (isFavorite) Icons.Rounded.Favorite
-                    else Icons.Rounded.FavoriteBorder,
-                    contentDescription = if (isFavorite) "Quitar de favoritos"
-                    else "Añadir a favoritos",
-                    iconSize = 22.dp,
-                    tint = if (isFavorite) FavoriteRed else playerInk,
-                    //Sin cancion no hay que marcar: el boton no hace nada
-                    onClick = { song?.let { mediaViewModel.toggleFavorite(it.id) } }
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+
+                    PlayerIconButton(
+                        icon = Icons.Rounded.PlaylistAdd,
+                        contentDescription = "Agregar a playlist",
+                        iconSize = 24.dp,
+                        tint = playerInk,
+                        onClick = { if (song != null) showPlaylistPicker = true }
+                    )
+
+                    PlayerIconButton(
+                        icon = if (isFavorite) Icons.Rounded.Favorite
+                        else Icons.Rounded.FavoriteBorder,
+                        contentDescription = if (isFavorite) "Quitar de favoritos"
+                        else "Añadir a favoritos",
+                        iconSize = 22.dp,
+                        tint = if (isFavorite) FavoriteRed else playerInk,
+                        //Sin cancion no hay que marcar: el boton no hace nada
+                        onClick = { song?.let { mediaViewModel.toggleFavorite(it.id) } }
+                    )
+                }
             }
         }
 
@@ -427,5 +446,18 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
 
             Spacer(Modifier.height(8.dp))
         }
+    }
+    
+    if (showPlaylistPicker && song != null) {
+        AddToPlaylistDialog(
+            songTitle = song.title,
+            songId = song.id,
+            //Favoritos (id == null) queda fuera: a eso se entra por el corazon
+            playlists = playlistGroups.filter { it.id != null },
+            onSelect = { idPlaylist ->
+                mediaViewModel.addSongToPlaylist(idPlaylist, song.id)
+            },
+            onDismiss = { showPlaylistPicker = false }
+        )
     }
 }
