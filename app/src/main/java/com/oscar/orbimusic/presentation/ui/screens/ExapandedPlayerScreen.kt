@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Pause
@@ -120,6 +121,9 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
 
     val song = playerState.currentSong
     val duration = song?.duration ?: 0L
+
+    val favoriteIds by mediaViewModel.favoriteIds.collectAsState()
+    val isFavorite = song != null && song.id in favoriteIds
 
     //El expandido no sigue al tema: es oscuro en claro y en oscuro. La caratula
   
@@ -234,12 +238,16 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 )
 
                 PlayerIconButton(
-                    icon = Icons.Rounded.FavoriteBorder,
-                    contentDescription = "Añadir a favoritos",
+                    icon = if (isFavorite) Icons.Rounded.Favorite
+                    else Icons.Rounded.FavoriteBorder,
+                    contentDescription = if (isFavorite) "Quitar de favoritos"
+                    else "Añadir a favoritos",
                     iconSize = 22.dp,
+                    //El expandido no sigue al tema, siempre es oscuro, asi que
+                    //el corazon se queda en playerInk en lugar de usar secondary
                     tint = playerInk,
-                    // TODO: Agregar a favoritos
-                    onClick = { }
+                    //Sin cancion no hay que marcar: el boton no hace nada
+                    onClick = { song?.let { mediaViewModel.toggleFavorite(it.id) } }
                 )
             }
         }

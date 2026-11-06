@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -109,6 +110,8 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
     val playerState by mediaViewModel.playerState.collectAsState();
     val isExpanded by mediaViewModel.isExpanded.collectAsState();
     val playlistGroups by mediaViewModel.playlistGroups.collectAsState();
+    //Un solo Set para toda la pantalla, en vez de una consulta por fila
+    val favoriteIds by mediaViewModel.favoriteIds.collectAsState();
 
     //0 = nombre, 1 = artista, 2 = recientes, 3 = agrupado por playlist
     var selectedFilter by rememberSaveable { mutableIntStateOf(2) }
@@ -116,7 +119,9 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
     Column(Modifier.fillMaxSize()) {
 
-                Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp, bottom = 16.dp)) {
+                //El titulo conserva su padding; las pildoras salen de el para
+                //poder scrollear de orilla a orilla
+                Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp)) {
 
                     Text(
                         text = "Biblioteca",
@@ -137,31 +142,46 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                         style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
 
-                    Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(18.dp))
 
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                //LazyRow y no Row: con cuatro pildoras ya no caben en pantallas
+                //angostas. El margen va en contentPadding y no en el Modifier
+                //para que al scrollear las pildoras pasen por debajo del borde
+                //en vez de cortarse contra un padding fijo.
+                LazyRow(
+                    Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 22.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
                         FilterPill("Nombre", selectedFilter == 0) {
                             selectedFilter = 0
                             mediaViewModel.loadAllSongsByTitle()
                         }
+                    }
+                    item {
                         FilterPill("Artista", selectedFilter == 1) {
                             selectedFilter = 1
                             mediaViewModel.loadAllSongsByArtist()
                         }
+                    }
+                    item {
                         FilterPill("Recientes", selectedFilter == 2) {
                             selectedFilter = 2
                             mediaViewModel.loadAllSongs()
                         }
+                    }
+                    item {
                         //No recarga allSongs: cambia la forma de la lista, no su orden
                         FilterPill("Playlists", selectedFilter == 3) {
                             selectedFilter = 3
                         }
                     }
                 }
+
+                Spacer(Modifier.height(16.dp))
 
                 LazyColumn(
                     Modifier.weight(1f),
@@ -205,7 +225,9 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                                     artist = song.artist,
                                     albumArt = song.albumArtPath,
                                     duration = song.duration,
-                                    isPlaying = playerState.currentSong?.path == song.path && playerState.isPlaying
+                                    isPlaying = playerState.currentSong?.path == song.path && playerState.isPlaying,
+                                    isFavorite = song.id in favoriteIds,
+                                    onToggleFavorite = { mediaViewModel.toggleFavorite(song.id) }
                                 )
                             }
                         }
@@ -219,7 +241,9 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                                 artist = song.artist,
                                 albumArt = song.albumArtPath,
                                 duration = song.duration,
-                                isPlaying = playerState.currentSong?.path == song.path && playerState.isPlaying
+                                isPlaying = playerState.currentSong?.path == song.path && playerState.isPlaying,
+                                isFavorite = song.id in favoriteIds,
+                                onToggleFavorite = { mediaViewModel.toggleFavorite(song.id) }
                             )
                         }
                     }

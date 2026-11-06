@@ -22,6 +22,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -105,7 +110,9 @@ fun MediaSongCard(
     artist: String,
     albumArt: String?,
     duration: Long,
-    isPlaying: Boolean = false
+    isPlaying: Boolean = false,
+    isFavorite: Boolean = false,
+    onToggleFavorite: (() -> Unit)? = null
 ) {
     Row(
         modifier
@@ -175,6 +182,22 @@ fun MediaSongCard(
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1
+                )
+            }
+        }
+
+        if (onToggleFavorite != null) {
+            IconButton(onClick = onToggleFavorite, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    //Relleno cuando es favorita, contorno cuando no. El cambio
+                    //de icono es lo que comunica el estado, no solo el color.
+                    imageVector = if (isFavorite) Icons.Rounded.Favorite
+                    else Icons.Rounded.FavoriteBorder,
+                    contentDescription = if (isFavorite) "Quitar de favoritos"
+                    else "Agregar a favoritos",
+                    modifier = Modifier.size(20.dp),
+                    tint = if (isFavorite) MaterialTheme.colorScheme.secondary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
