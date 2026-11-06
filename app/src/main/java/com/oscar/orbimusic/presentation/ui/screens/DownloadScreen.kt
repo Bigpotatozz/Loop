@@ -82,14 +82,14 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
     }
 
     val widgetsList = listOf(
-        Widget("Pop",        url = "idk", colors = listOf(Color(0xFFEB1855), Color(0xFFC52A70), Color(0xFFF59E0B))),
-        Widget("Focus",      url = "idk", colors = listOf(Color(0xFF385D6C), Color(0xFF527C8C), Color(0xFFA9C3CC))),
-        Widget("Workout",    url = "idk", colors = listOf(Color(0xFFA92D12), Color(0xFFED7C15), Color(0xFF30221A))),
-        Widget("Chill",      url = "idk", colors = listOf(Color(0xFF153B86), Color(0xFF3477AD), Color(0xFF343B9B))),
-        Widget("Rock",       url = "idk", colors = listOf(Color(0xFF142B26), Color(0xFF1D452F), Color(0xFF5F251F))),
-        Widget("Jazz",       url = "idk", colors = listOf(Color(0xFF4B4120), Color(0xFF75622A), Color(0xFF1A1A17))),
-        Widget("Electronic", url = "idk", colors = listOf(Color(0xFF075D76), Color(0xFF1293AA), Color(0xFF123D71))),
-        Widget("Ambient",    url = "idk", colors = listOf(Color(0xFF24206A), Color(0xFF5E3187), Color(0xFFC574A9))),
+        Widget("Pop",        colors = listOf(Color(0xFFEB1855), Color(0xFFC52A70), Color(0xFFF59E0B))),
+        Widget("Focus",      colors = listOf(Color(0xFF385D6C), Color(0xFF527C8C), Color(0xFFA9C3CC))),
+        Widget("Workout",    colors = listOf(Color(0xFFA92D12), Color(0xFFED7C15), Color(0xFF30221A))),
+        Widget("Chill",      colors = listOf(Color(0xFF153B86), Color(0xFF3477AD), Color(0xFF343B9B))),
+        Widget("Rock",       colors = listOf(Color(0xFF142B26), Color(0xFF1D452F), Color(0xFF5F251F))),
+        Widget("Jazz",       colors = listOf(Color(0xFF4B4120), Color(0xFF75622A), Color(0xFF1A1A17))),
+        Widget("Electronic", colors = listOf(Color(0xFF075D76), Color(0xFF1293AA), Color(0xFF123D71))),
+        Widget("Ambient",    colors = listOf(Color(0xFF24206A), Color(0xFF5E3187), Color(0xFFC574A9))),
     )
 
     val chunkedWidgets = widgetsList.chunked(2)
@@ -265,15 +265,25 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
                             PersonalizedWidget(
                                 modifier = Modifier.weight(1f).padding(4.dp),
                                 label = elements[0].label,
-                                url = elements[0].url,
-                                colors = elements[0].colors
+                                colors = elements[0].colors,
+                                onClick = {
+                                    title = elements[0].label
+                                    hasSearched = true
+                                    downloadViewModel.search(elements[0].label)
+                                    keyboardController?.hide()
+                                }
                             )
                             if (elements.size > 1) {
                                 PersonalizedWidget(
                                     modifier = Modifier.weight(1f).padding(4.dp),
                                     label = elements[1].label,
-                                    url = elements[1].url,
-                                    colors = elements[1].colors
+                                    colors = elements[1].colors,
+                                    onClick = {
+                                        title = elements[1].label
+                                        hasSearched = true
+                                        downloadViewModel.search(elements[1].label)
+                                        keyboardController?.hide()
+                                    }
                                 )
                             }
                         }
@@ -284,10 +294,10 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
     }
 }
 
-class Widget(val label: String, val url: String, val colors: List<Color>)
+class Widget(val label: String, val colors: List<Color>)
 
 @Composable
-fun PersonalizedWidget(modifier: Modifier = Modifier, label: String, url: String, colors: List<Color>) {
+fun PersonalizedWidget(modifier: Modifier = Modifier, label: String, colors: List<Color>, onClick: () -> Unit) {
     val shape = RoundedCornerShape(15.dp)
     val gradient = Brush.linearGradient(
         colors = colors,
@@ -301,7 +311,7 @@ fun PersonalizedWidget(modifier: Modifier = Modifier, label: String, url: String
             .height(105.dp)
             .clip(shape)
             .background(gradient)
-            .clickable { print(url) },
+            .clickable { onClick() },
         contentAlignment = Alignment.CenterStart
     ) {
         Text(
