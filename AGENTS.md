@@ -249,6 +249,71 @@ dos definiciones separadas que pueden volver a divergir. Se propuso un
 
 ---
 
+## Evaluación: adaptar la app a horizontal (sin hacer)
+
+Preguntado por el usuario: cuánto costaría soportar orientación horizontal.
+No se tomó ninguna decisión ni se tocó nada; esto es el diagnóstico.
+
+**Resumen:** no es un rediseño, pero no es gratis. El trabajo está concentrado
+en tres pantallas; el resto ya se adapta solo.
+
+### No se toca nada
+
+Room, DAOs, repositorio y ViewModels no saben de orientación. Los ViewModels
+viven en el `ViewModelStore` de la Activity, así que el estado ya sobrevive al
+cambio de configuración.
+
+### Ya funciona
+
+Las listas (`LazyColumn` con `fillMaxWidth` / `weight`) se reacomodan sin
+cambios. El `LazyRow` de píldoras de filtro ya scrollea. El mosaico de carátulas
+usa `aspectRatio(1f)` y se adapta.
+
+### Donde está el trabajo
+
+**`ExapandedPlayerScreen.kt` — el caro.** Está construido como un `Column`
+vertical: carátula con `weight(1f)`, luego título, slider y controles. En
+horizontal la carátula se come todo el alto y deja los controles aplastados.
+Necesita un layout distinto (carátula a la izquierda, controles a la derecha),
+no un ajuste. Es la pantalla con más diseño encima y probablemente cuesta más
+que todo lo demás junto.
+
+**La cabecera del detalle de playlist se rompe.** `PlaylistDetailHeader` en
+`Media.kt` usa `fillMaxWidth().aspectRatio(1f)`, que en horizontal es un
+cuadrado tan alto como ancha es la pantalla: habría que scrollear por una
+imagen gigante antes de ver una canción. Se arregla con un `heightIn(max = ...)`.
+
+**El navbar.** Un `NavigationBar` abajo come alto que en horizontal ya escasea.
+Lo correcto es un `NavigationRail` lateral, lo que implica reacomodar el
+`Scaffold` de `MainActivity`.
+
+### Cosas chicas que la rotación va a exponer
+
+- **`DownloadScreen` pierde la búsqueda al rotar.** Su `DisposableEffect` llama
+  `clearSearch()` al salir de composición, y rotar desmonta la composición. Fue
+  una consecuencia aceptada a conciencia cuando se hizo; en horizontal se va a
+  notar seguido. Arreglo real: escuchar el ciclo de vida del `NavBackStackEntry`
+  en vez de la composición, que sí distingue "me fui" de "se recreó la Activity".
+- **Auditar `remember` vs `rememberSaveable`.** Varios estados de `Media.kt`
+  (`songToDelete`, `playlistToDelete`, el texto de `CreatePlaylistDialog`) usan
+  `remember` y se pierden al rotar. Son líneas sueltas.
+- **Los widgets de `DownloadScreen` están en `chunked(2)` fijo.** En horizontal
+  querrías 3 o 4 columnas.
+
+### Cómo hacerlo
+
+Con `WindowSizeClass` (artefacto `material3-window-size-class`, **hoy no está
+en las dependencias**), no preguntando por orientación. Da `Compact / Medium /
+Expanded` y el mismo trabajo sirve para tablets y plegables.
+
+### Salida intermedia
+
+Bloquear a vertical con `android:screenOrientation="portrait"` en el manifiesto,
+excepto el reproductor. Una línea, y el problema se pospone hasta quererlo hacer
+bien. Es lo que hacen varias apps de música.
+
+---
+
 ## Decisiones de diseño tomadas
 
 Para no re-litigar lo ya acordado:
