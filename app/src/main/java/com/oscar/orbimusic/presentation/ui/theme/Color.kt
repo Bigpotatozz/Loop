@@ -18,6 +18,8 @@ val HairlineDark = Color(0xFF2E2E30)
 val SurfaceSoftDark = Color(0xFF232325)
 val PlayerSurface = Black
 val PlayerInk = White
+
+val FavoriteRed = Color(0xFFE5484D)
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEAECF0)

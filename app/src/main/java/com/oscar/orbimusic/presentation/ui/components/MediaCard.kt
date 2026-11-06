@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.oscar.orbimusic.presentation.ui.theme.FavoriteRed
 import com.oscar.orbimusic.presentation.ui.theme.OrbiMusicTheme
 import com.oscar.orbimusic.presentation.utils.parseTime
 
@@ -196,7 +197,7 @@ fun MediaSongCard(
                     contentDescription = if (isFavorite) "Quitar de favoritos"
                     else "Agregar a favoritos",
                     modifier = Modifier.size(20.dp),
-                    tint = if (isFavorite) MaterialTheme.colorScheme.secondary
+                    tint = if (isFavorite) FavoriteRed
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

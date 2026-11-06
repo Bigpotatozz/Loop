@@ -16,21 +16,33 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -78,6 +90,84 @@ private fun FilterPill(
     }
 }
 
+//Fila para dar de alta una playlist. Comparte alto y padding con MediaSongCard
+//para que se lea como parte de la misma lista y no como algo pegado encima.
+@Composable
+private fun NewPlaylistRow(onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 60.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        //Cuadro del mismo ancho que una caratula, para que el texto arranque
+        //alineado con el de las canciones de abajo
+        Box(
+            Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Add,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary
+            )
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        Text(
+            text = "Nueva playlist",
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = (-0.2).sp
+            )
+        )
+    }
+}
+
+//El texto vive dentro del dialogo: al cerrarse se va con el, y no hay que
+//acordarse de limpiarlo desde la pantalla.
+@Composable
+private fun CreatePlaylistDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nueva playlist") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                singleLine = true,
+                placeholder = { Text("Nombre") }
+            )
+        },
+        confirmButton = {
+            TextButton(
+                //Deshabilitado mientras este en blanco: una playlist sin nombre
+                //no se podria distinguir en la lista
+                enabled = name.isNotBlank(),
+                onClick = { onConfirm(name.trim()) }
+            ) {
+                Text("Crear")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
 //Encabezado de cada bloque de la vista agrupada
 @Composable
 private fun PlaylistHeader(name: String, songCount: Int) {
@@ -116,6 +206,18 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
     //0 = nombre, 1 = artista, 2 = recientes, 3 = agrupado por playlist
     var selectedFilter by rememberSaveable { mutableIntStateOf(2) }
     val groupedByPlaylist = selectedFilter == 3
+
+    var showCreateDialog by rememberSaveable { mutableStateOf(false) }
+
+    if (showCreateDialog) {
+        CreatePlaylistDialog(
+            onDismiss = { showCreateDialog = false },
+            onConfirm = { name ->
+                mediaViewModel.createPlaylist(name)
+                showCreateDialog = false
+            }
+        )
+    }
 
     Column(Modifier.fillMaxSize()) {
 
@@ -189,6 +291,11 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     if (groupedByPlaylist) {
+
+                        item(key = "new-playlist") {
+                            NewPlaylistRow(onClick = { showCreateDialog = true })
+                        }
+
                         playlistGroups.forEach { group ->
 
                             item(key = "header-${group.id}") {

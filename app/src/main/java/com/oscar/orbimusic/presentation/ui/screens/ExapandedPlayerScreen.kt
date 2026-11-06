@@ -71,6 +71,7 @@ import com.oscar.orbimusic.presentation.ui.animations.PlayerArtKey
 import com.oscar.orbimusic.presentation.ui.animations.PlayerContainerKey
 import com.oscar.orbimusic.presentation.ui.animations.PlayerTitleKey
 import com.oscar.orbimusic.presentation.ui.components.AlbumArtPlaceholder
+import com.oscar.orbimusic.presentation.ui.theme.FavoriteRed
 import com.oscar.orbimusic.presentation.ui.theme.PlayerInk
 import com.oscar.orbimusic.presentation.ui.theme.PlayerSurface
 import com.oscar.orbimusic.presentation.ui.animations.sharedPlayerBounds
@@ -243,9 +244,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                     contentDescription = if (isFavorite) "Quitar de favoritos"
                     else "Añadir a favoritos",
                     iconSize = 22.dp,
-                    //El expandido no sigue al tema, siempre es oscuro, asi que
-                    //el corazon se queda en playerInk en lugar de usar secondary
-                    tint = playerInk,
+                    tint = if (isFavorite) FavoriteRed else playerInk,
                     //Sin cancion no hay que marcar: el boton no hace nada
                     onClick = { song?.let { mediaViewModel.toggleFavorite(it.id) } }
                 )
@@ -282,9 +281,6 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
 
         Spacer(Modifier.height(24.dp))
 
-        //Bloque inferior: lleva su propio margen lateral y se aparta de la barra
-        //de gestos. La imagen de arriba no se aparta de nada, por eso los insets
-        //ya no estan en la Column raiz.
         Column(
             Modifier
                 .fillMaxWidth()
