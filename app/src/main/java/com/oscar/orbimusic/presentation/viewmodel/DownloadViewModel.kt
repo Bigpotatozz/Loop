@@ -143,6 +143,16 @@ class DownloadViewModel(private val context: Context): ViewModel() {
         _completedDownloads.value = emptySet();
     }
 
+    fun downloadFromUrl(url: String) {
+        if (url.isBlank()) return
+        val videoId = Regex("""[?&]v=([a-zA-Z0-9_-]{11})""")
+            .find(url)?.groupValues?.get(1)
+            ?: Regex("""youtu\.be/([a-zA-Z0-9_-]{11})""")
+                .find(url)?.groupValues?.get(1)
+            ?: url
+        DownloadSong(videoId, url, "URL")
+    }
+
     fun DownloadSong(videoId: String, url: String, title: String){
         //Antes era downloadService!!, que tiraba NPE si se tocaba un boton
         //antes de que el servicio terminara de enlazarse
