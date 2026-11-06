@@ -401,7 +401,7 @@ class DownloadMusicService: Service() {
 
     private fun buildNotification(text: String, progress: Int, ongoing: Boolean) =
         NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("OrbiMusic - Descargas") // Título fijo
+            .setContentTitle("Loop - Descargas")
             .setContentText(text) // Texto variable (título de la canción, estado)
             .setSmallIcon(R.drawable.ic_launcher_foreground) // Icono
             .setPriority(NotificationCompat.PRIORITY_LOW) // Baja prioridad
