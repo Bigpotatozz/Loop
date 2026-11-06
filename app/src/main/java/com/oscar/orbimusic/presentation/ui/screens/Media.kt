@@ -36,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QueueMusic
@@ -44,9 +45,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -329,6 +333,62 @@ private fun PlaylistCoverMosaic(
             }
         }
     }
+}
+
+
+//Envuelve una fila para poder quitarla deslizando hacia la izquierda
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeToRemove(
+    onRemove: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val state = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                onRemove()
+                true
+            } else {
+                false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = state,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            if (state.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(FavoriteRed)
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Rounded.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = Color.White
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Quitar",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+        },
+        content = { content() }
+    )
 }
 
 
@@ -773,25 +833,36 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                         }
 
                         itemsIndexed(branchSongs, key = { _, song -> song.id }) { index, song ->
-                            MediaSongCard(
-                                modifier = Modifier
-                                    //El margen lateral lo pone cada cancion
-                                    //porque la lista ya no lo tiene
-                                    .padding(horizontal = 12.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    //playSongs y no playSong: la cola es la
-                                    //playlist, no la biblioteca completa
-                                    .clickable(onClick = {
-                                        mediaViewModel.playSongs(branchSongs, index)
-                                    }),
-                                title = song.title,
-                                artist = song.artist,
-                                albumArt = song.albumArtPath,
-                                duration = song.duration,
-                                isPlaying = playerState.currentSong?.path == song.path && playerState.isPlaying,
-                                isFavorite = song.id in favoriteIds,
-                                onToggleFavorite = { mediaViewModel.toggleFavorite(song.id) }
-                            )
+                            //El margen va afuera para que el fondo rojo y la
+                            //tarjeta queden alineados al deslizar
+                            Box(Modifier.padding(horizontal = 12.dp)) {
+                                SwipeToRemove(
+                                    onRemove = {
+                                        val id = openSummary.id
+                                        if (id == null) {
+                                            mediaViewModel.removeFavorite(song.id)
+                                        } else {
+                                            mediaViewModel.removeSongFromPlaylist(id, song.id)
+                                        }
+                                    }
+                                ) {
+                                    MediaSongCard(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(MaterialTheme.colorScheme.primary)
+                                            .clickable(onClick = {
+                                                mediaViewModel.playSongs(branchSongs, index)
+                                            }),
+                                        title = song.title,
+                                        artist = song.artist,
+                                        albumArt = song.albumArtPath,
+                                        duration = song.duration,
+                                        isPlaying = playerState.currentSong?.path == song.path && playerState.isPlaying,
+                                        isFavorite = song.id in favoriteIds,
+                                        onToggleFavorite = { mediaViewModel.toggleFavorite(song.id) }
+                                    )
+                                }
+                            }
                         }
 
                     //PRIMER NIVEL: solo los nombres de las playlists

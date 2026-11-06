@@ -175,6 +175,12 @@ class MediaViewModel (private val songRepository: SongRepository,
         }
     }
 
+    fun removeFavorite(songId: Long) {
+        viewModelScope.launch {
+            songRepository.removeFavorite(songId)
+        }
+    }
+
 
     // ---------- PLAYLISTS ----------
 
