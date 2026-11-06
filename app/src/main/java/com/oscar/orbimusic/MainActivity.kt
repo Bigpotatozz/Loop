@@ -100,7 +100,9 @@ class MainActivity : ComponentActivity() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             requestPermissions.launch(arrayOf(
                 android.Manifest.permission.READ_MEDIA_AUDIO,
-                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                //Sin este permiso la notificacion de progreso de descarga no se ve
+                android.Manifest.permission.POST_NOTIFICATIONS
             ))
         } else {
             requestPermissions.launch(arrayOf(

@@ -15,10 +15,14 @@ app/src/main/java/com/oscar/orbimusic/
 │   ├── audio/                 # Servicios de audio
 │   │   ├── AudioPlayerService.kt
 │   │   ├── AudioServiceConnection.kt
-│   │   ├── DownloadMusicService.kt         # ✨ Nuevo
-│   │   ├── DownloadServiceConnection.kt    # ✨ Nuevo
-│   │   ├── DownloadProgress.kt             # ✨ Nuevo (data class)
+│   │   ├── DownloadMusicService.kt         # Descarga + búsqueda (todo yt-dlp)
+│   │   ├── DownloadMusicServiceConnection.kt
 │   │   └── FileScanner.kt
+│   ├── models/                # Data classes de la capa de datos
+│   │   ├── DownloadProgress.kt
+│   │   └── YtSearchResult.kt               # ✨ Nuevo
+│   ├── repository/
+│   │   └── SongRepositoryImpl.kt
 │   └── local/database/        # Room Database
 │       ├── SongDao.kt
 │       ├── SongDatabase.kt
@@ -156,13 +160,14 @@ io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1
    - ✅ Crear DownloadMusicService
    - ✅ Integrar con FileScanner
    - ✅ Descargas con metadatos
-3. 🔄 **UI para descargas (PRIORIDAD)**
-   - Crear DownloadScreen con búsqueda
-   - Implementar diálogo de descarga
-   - Mostrar progreso en tiempo real
-4. 🔄 Sistema de favoritos
-5. 🔄 Historial de reproducción
-6. 🔄 Playlists personalizadas
+3. 🔄 **Búsqueda en YouTube (PRIORIDAD)**
+   - ✅ `searchOnYt()` en DownloadMusicService
+   - ✅ `search()` / `clearSearch()` + `searchResults` / `isSearching` en DownloadViewModel
+   - 🔄 Lista de resultados en DownloadScreen con botón de descarga por fila
+4. ⏸️ **Limitar a una descarga a la vez** (pendiente, decidido pero no aplicado)
+5. 🔄 Sistema de favoritos
+6. 🔄 Historial de reproducción
+7. 🔄 Playlists personalizadas
 
 ## 🔧 Notas Técnicas de la Sesión
 
@@ -173,6 +178,29 @@ io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1
 - Requiere FFmpeg inicializado para procesar metadatos
 - Guarda en `/data/data/com.oscar.orbimusic/files/Music/`
 - Notifica mediante callback `DownloadProgress`
+
+### Búsqueda en YouTube (`searchOnYt`)
+- Vive en `DownloadMusicService` por decisión explícita: todo lo de yt-dlp
+  (init, update, búsqueda y descarga) queda centralizado ahí aunque el nombre
+  del servicio no lo refleje.
+- Es `suspend` y **no** fire-and-forget como la descarga: devuelve la lista
+  directamente, sin callback. Tampoco levanta foreground ni notificación —
+  es pedir y recibir, no trabajo largo.
+- Espera el mismo `isInitialized` que la descarga; sin eso yt-dlp lanza
+  "instance not initialized".
+- Usa `ytsearch20:<query>` con `--flat-playlist --dump-json --no-warnings`.
+  **`--flat-playlist` es crítico**: sin él yt-dlp extrae los 20 videos uno por
+  uno (20 peticiones completas) y la búsqueda se vuelve inusable.
+- `--dump-json` imprime **un JSON por línea**, no un array. Se parsea con
+  `org.json.JSONObject` (viene en Android, cero dependencias nuevas) y cada
+  línea va en su propio try/catch para que un resultado roto no tumbe los otros.
+- En modo flat faltan campos: el canal puede venir en `channel` o en `uploader`,
+  y `webpage_url` suele no venir — se arma desde el `id`.
+- La miniatura se construye como `https://i.ytimg.com/vi/<id>/hqdefault.jpg` en
+  vez de leer el array `thumbnails`: siempre existe para un id válido y trae un
+  tamaño predecible, en lugar de la de 1280px que yt-dlp deja al final del array.
+- Devuelve `emptyList()` si falla. **No distingue "sin resultados" de "error"**;
+  si hace falta ese estado en la UI, hay que agregarlo.
 
 ### Sincronización con FileScanner
 - FileScanner escanea la misma carpeta que DownloadService
@@ -185,6 +213,35 @@ io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1
 - YouTubeDL no se inicializaba: Agregado `YoutubeDL.getInstance().init()`
 - Metadatos no se incluían: Agregado `--add-metadata` y `--embed-metadata`
 - FFmpeg no estaba inicializado: Descomentado `FFmpeg.getInstance().init()`
+
+### Problemas Conocidos (pendientes)
+
+**Descargas simultáneas se pisan entre sí** — `downloadFromYt` identifica lo que acaba
+de bajar listando la carpeta `Music/` y tomando el `.m4a` más reciente
+(`DownloadMusicService.kt:211`), y hace lo mismo con el `.jpg` de la carátula
+(`DownloadMusicService.kt:231`). Con una sola descarga a la vez es correcto; con
+dos o más, ambas leen el mismo archivo y una de las carátulas nunca se mueve a
+`arthPath/`, así que esa canción se queda sin portada.
+
+Decisión tomada: limitarlo a **una descarga a la vez** con un `Mutex` en
+`downloadFromYt`, en vez de una carpeta de staging. Se aplica después de terminar
+la búsqueda. Lo que hace falta junto con el `Mutex`:
+
+- `isDownloading` nunca se pone en `true`: se calcula desde el callback
+  (`DownloadViewModel.kt:52`) y el callback solo se dispara al terminar o al
+  fallar. `DownloadSong` tiene que marcarlo al arrancar para poder deshabilitar
+  los botones de descarga mientras hay una en curso.
+- `downloadService!!` (`DownloadViewModel.kt:75`) lanza NPE si se toca un botón
+  antes de que el servicio termine de enlazarse.
+
+Hueco que el `Mutex` **no** cubre, aceptado a conciencia: si la app se cierra
+mientras el servicio sigue descargando, al reabrirla `MainActivity.kt:80` escanea
+y puede indexar un `.m4a` a medias. Como `searchByPath` después lo da por
+"repetida sin cambios" (`FileScanner.kt:56`), queda mal permanentemente. Esto sí
+lo arreglaría la carpeta de staging.
+
+**Código muerto:** el bloque de `MediaMetadataRetriever` en
+`DownloadMusicService.kt:219-222` extrae `audioTitle` y nunca lo usa.
 
 ## 🐛 Notas Técnicas Importantes
 
@@ -232,5 +289,5 @@ ndk {
 
 ---
 
-**Última actualización:** 2026-08-06
-**Versión:** 1.1 (YouTubeDL backend completado)
+**Última actualización:** 2026-11-05
+**Versión:** 1.2 (búsqueda en YouTube: capa de servicio lista, falta ViewModel y UI)

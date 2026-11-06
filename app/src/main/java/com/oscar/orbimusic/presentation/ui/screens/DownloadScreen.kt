@@ -1,28 +1,43 @@
 package com.oscar.orbimusic.presentation.ui.screens
 
 import androidx.annotation.OptIn
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,16 +45,41 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.util.UnstableApi
+import com.oscar.orbimusic.presentation.ui.components.DownloadRowState
+import com.oscar.orbimusic.presentation.ui.components.SearchResultCard
 import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
+import kotlinx.coroutines.delay
+
+//Tiempos de la entrada en cascada de los resultados
+private const val STAGGER_STEP_MS = 40L      // retraso entre una fila y la siguiente
+private const val STAGGER_MAX_STEPS = 10     // a partir de aqui todas entran juntas
+private const val ENTRANCE_DURATION_MS = 220L // lo que dura el fade/slide de cada fila
 
 @OptIn(UnstableApi::class)
 @Composable
 fun DownloadScreen(downloadViewModel: DownloadViewModel) {
-    var title by rememberSaveable { mutableStateOf("") }
+    var title by remember { mutableStateOf("") }
+
+    val searchResults by downloadViewModel.searchResults.collectAsState()
+    val isSearching by downloadViewModel.isSearching.collectAsState()
+    val isDownloading by downloadViewModel.isDownloading.collectAsState()
+    val downloadingId by downloadViewModel.downloadingId.collectAsState()
+    val downloadProgress by downloadViewModel.downloadProgress.collectAsState()
+    val completedDownloads by downloadViewModel.completedDownloads.collectAsState()
+
+    //Para esconder el teclado al lanzar la busqueda y dejar ver los resultados
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var hasSearched by remember { mutableStateOf(false) }
+    
+    DisposableEffect(Unit) {
+        onDispose { downloadViewModel.clearSearch() }
+    }
 
     val widgetsList = listOf(
         Widget("Pop",        url = "idk", colors = listOf(Color(0xFFEB1855), Color(0xFFC52A70), Color(0xFFF59E0B))),
@@ -92,6 +132,22 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
+            trailingIcon = {
+                //Solo aparece si hay algo escrito; limpiar devuelve la pantalla a los widgets
+                if (title.isNotEmpty()) {
+                    IconButton(onClick = {
+                        title = ""
+                        hasSearched = false
+                        downloadViewModel.clearSearch()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = "Limpiar busqueda",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -99,25 +155,128 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent,
             ),
+            //La busqueda se dispara con la tecla de buscar, no en cada letra:
+            //cada pulsacion seria un proceso de yt-dlp
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = {
+                hasSearched = title.isNotBlank()
+                downloadViewModel.search(title)
+                keyboardController?.hide()
+            }),
             singleLine = true
         )
 
-        Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp)) {
-            for (elements in chunkedWidgets) {
-                Row {
-                    PersonalizedWidget(
-                        modifier = Modifier.weight(1f).padding(4.dp),
-                        label = elements[0].label,
-                        url = elements[0].url,
-                        colors = elements[0].colors
+        when {
+            isSearching -> {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                }
+            }
+
+            searchResults.isNotEmpty() -> {
+                var entranceDone by remember(searchResults) { mutableStateOf(false) }
+                LaunchedEffect(searchResults) {
+                    delay(STAGGER_MAX_STEPS * STAGGER_STEP_MS + ENTRANCE_DURATION_MS)
+                    entranceDone = true
+                }
+
+                LazyColumn(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    itemsIndexed(searchResults, key = { _, result -> result.id }) { index, result ->
+                        //Si la fila se compone despues de la cascada (scroll),
+                        //arranca ya visible y no se anima
+                        var visible by remember(result.id) { mutableStateOf(entranceDone) }
+                        LaunchedEffect(result.id) {
+                            if (!visible) {
+                                //El tope evita que las ultimas filas tarden casi
+                                //un segundo en aparecer
+                                delay(minOf(index, STAGGER_MAX_STEPS) * STAGGER_STEP_MS)
+                                visible = true
+                            }
+                        }
+
+                        AnimatedVisibility(
+                            visible = visible,
+                            enter = fadeIn(animationSpec = tween(ENTRANCE_DURATION_MS.toInt())) +
+                                    //Arranca un cuarto de su altura mas abajo
+                                    slideInVertically(
+                                        animationSpec = tween(ENTRANCE_DURATION_MS.toInt())
+                                    ) { it / 4 }
+                        ) {
+                            //El progreso es uno solo porque solo corre una
+                            //descarga a la vez; downloadingId dice a que fila toca
+                            val rowState = when {
+                                result.id in completedDownloads -> DownloadRowState.Done
+                                result.id != downloadingId -> DownloadRowState.Idle
+                                downloadProgress < 0 -> DownloadRowState.Starting
+                                else -> DownloadRowState.Running(downloadProgress)
+                            }
+
+                            SearchResultCard(
+                                result = result,
+                                //El servicio recibe la url tal cual viene de la busqueda
+                                onDownload = {
+                                    downloadViewModel.DownloadSong(
+                                        result.id,
+                                        result.url,
+                                        result.title
+                                    )
+                                },
+                                state = rowState,
+                                downloadEnabled = !isDownloading
+                            )
+                        }
+                    }
+                }
+            }
+
+            //Se busco y no llego nada. Ojo: searchOnYt tambien devuelve lista
+            //vacia cuando falla, asi que este mensaje cubre los dos casos
+            hasSearched -> {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No se encontraron resultados",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (elements.size > 1) {
-                        PersonalizedWidget(
-                            modifier = Modifier.weight(1f).padding(4.dp),
-                            label = elements[1].label,
-                            url = elements[1].url,
-                            colors = elements[1].colors
-                        )
+                }
+            }
+
+            //Sin busqueda activa: los widgets de siempre
+            else -> {
+                Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp)) {
+                    for (elements in chunkedWidgets) {
+                        Row {
+                            PersonalizedWidget(
+                                modifier = Modifier.weight(1f).padding(4.dp),
+                                label = elements[0].label,
+                                url = elements[0].url,
+                                colors = elements[0].colors
+                            )
+                            if (elements.size > 1) {
+                                PersonalizedWidget(
+                                    modifier = Modifier.weight(1f).padding(4.dp),
+                                    label = elements[1].label,
+                                    url = elements[1].url,
+                                    colors = elements[1].colors
+                                )
+                            }
+                        }
                     }
                 }
             }
