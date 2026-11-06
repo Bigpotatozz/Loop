@@ -9,11 +9,13 @@ import com.oscar.orbimusic.data.audio.AudioPlayerService
 import com.oscar.orbimusic.data.audio.AudioServiceConnection
 import com.oscar.orbimusic.domain.model.PlayerState
 import com.oscar.orbimusic.domain.model.Playlist
-import com.oscar.orbimusic.domain.model.PlaylistGroup
+import com.oscar.orbimusic.domain.model.PlaylistSelection
+import com.oscar.orbimusic.domain.model.PlaylistSummary
 import com.oscar.orbimusic.domain.model.Song
 import com.oscar.orbimusic.domain.repository.SongRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -180,27 +182,38 @@ class MediaViewModel (private val songRepository: SongRepository,
     val playlists: StateFlow<List<Playlist>> = songRepository.getAllPlaylists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    //Para la vista agrupada de la biblioteca: Favoritos y luego cada playlist
-    //con sus canciones
-    val playlistGroups: StateFlow<List<PlaylistGroup>> = songRepository.getPlaylistGroups()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    //Primer nivel: Favoritos y las playlists con su conteo, sin canciones
+    val playlistSummaries: StateFlow<List<PlaylistSummary>> =
+        songRepository.getPlaylistSummaries()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    //Que playlist esta abierta. Null = ninguna.
-    private val _selectedPlaylistId = MutableStateFlow<Long?>(null);
-    val selectedPlaylistId: StateFlow<Long?> = _selectedPlaylistId.asStateFlow();
+    //Que playlist esta abierta en el segundo nivel. Null = primer nivel.
+    private val _openPlaylist = MutableStateFlow<PlaylistSelection?>(null);
+    val openPlaylist: StateFlow<PlaylistSelection?> = _openPlaylist.asStateFlow();
 
-    //Las canciones de la playlist abierta.
     @OptIn(ExperimentalCoroutinesApi::class)
-    val playlistSongs: StateFlow<List<Song>> = _selectedPlaylistId
-        .flatMapLatest { id ->
-            if (id == null) flowOf(emptyList())
-            else songRepository.getPlaylistSongs(id)
+    val playlistSongs: StateFlow<List<Song>> = _openPlaylist
+        .flatMapLatest { selection ->
+            when (selection) {
+                null -> flowOf(emptyList())
+                //Favoritos vive en su propia tabla, no en playlistDetalle
+                is PlaylistSelection.Favorites -> songRepository.getFavoriteSongs()
+                is PlaylistSelection.Real -> songRepository.getPlaylistSongs(selection.id)
+            }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun selectPlaylist(idPlaylist: Long?) {
-        _selectedPlaylistId.value = idPlaylist;
+    fun openPlaylist(selection: PlaylistSelection) {
+        _openPlaylist.value = selection;
     }
+
+    fun closePlaylist() {
+        _openPlaylist.value = null;
+    }
+
+    //En que playlists esta una cancion, para el selector de agregar
+    fun playlistIdsContaining(songId: Long): Flow<Set<Long>> =
+        songRepository.playlistIdsContaining(songId)
 
     //Devuelve el id de la playlist nueva por si la pantalla quiere abrirla
     fun createPlaylist(name: String, description: String = "", onCreated: (Long) -> Unit = {}) {
@@ -213,7 +226,9 @@ class MediaViewModel (private val songRepository: SongRepository,
         viewModelScope.launch {
             songRepository.deletePlaylist(idPlaylist)
             //Si estaba abierta, se cierra: su id ya no existe
-            if (_selectedPlaylistId.value == idPlaylist) _selectedPlaylistId.value = null
+            if (_openPlaylist.value == PlaylistSelection.Real(idPlaylist)) {
+                _openPlaylist.value = null
+            }
         }
     }
 

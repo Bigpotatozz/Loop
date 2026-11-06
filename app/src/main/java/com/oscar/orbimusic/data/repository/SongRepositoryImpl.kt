@@ -8,7 +8,7 @@ import com.oscar.orbimusic.data.local.database.PlaylistWithCount
 import com.oscar.orbimusic.data.local.database.SongDao
 import com.oscar.orbimusic.data.local.database.SongEntity
 import com.oscar.orbimusic.domain.model.Playlist
-import com.oscar.orbimusic.domain.model.PlaylistGroup
+import com.oscar.orbimusic.domain.model.PlaylistSummary
 import com.oscar.orbimusic.domain.model.Song
 import com.oscar.orbimusic.domain.repository.SongRepository
 import kotlinx.coroutines.flow.Flow
@@ -57,15 +57,10 @@ class SongRepositoryImpl(
     }
 
     override fun getFavoriteIds(): Flow<Set<Long>> {
-        //El DAO devuelve List; aqui se vuelve Set para que la UI pueda preguntar
-        //"contiene este id" por cada fila sin recorrer la lista entera
         return favoritesDao.getFavoriteIds().map { it.toSet() }
     }
 
     override suspend fun toggleFavorite(songId: Long) {
-        //addFavorite devuelve -1 cuando la cancion ya era favorita, porque el
-        //@Insert es IGNORE. Eso evita tener que leer primero el estado, que
-        //ademas dejaria una ventana para que dos toques rapidos se empalmaran.
         val inserted = favoritesDao.addFavorite(FavoritesEntity(songId = songId))
         if (inserted == -1L) {
             favoritesDao.removeFavorite(songId)
@@ -85,41 +80,37 @@ class SongRepositoryImpl(
         }
     }
 
-    override fun getPlaylistGroups(): Flow<List<PlaylistGroup>> {
+    override fun getPlaylistSummaries(): Flow<List<PlaylistSummary>> {
         return combine(
-            favoritesDao.getFavoriteSongs(),
-            playlistDao.getAllPlaylistsWithCount(),
-            playlistDao.getAllPlaylistSongs()
-        ) { favorites, playlists, rows ->
-
-            val songsByPlaylist = rows.groupBy(
-                keySelector = { it.idPlaylist },
-                valueTransform = { it.song.toDomainModel() }
-            )
+            favoritesDao.getFavoriteIds(),
+            playlistDao.getAllPlaylistsWithCount()
+        ) { favoriteIds, playlists ->
 
             buildList {
                 //Favoritos va primero y siempre aparece, aunque este vacio
                 add(
-                    PlaylistGroup(
+                    PlaylistSummary(
                         id = null,
                         name = "Favoritos",
-                        songs = favorites.map { it.toDomainModel() }
+                        songCount = favoriteIds.size
                     )
                 )
 
                 playlists.forEach { row ->
                     add(
-                        PlaylistGroup(
+                        PlaylistSummary(
                             id = row.playlist.idPlaylist,
                             name = row.playlist.nombre,
-                            //orEmpty porque una playlist sin canciones no
-                            //aparece en el resultado del JOIN
-                            songs = songsByPlaylist[row.playlist.idPlaylist].orEmpty()
+                            songCount = row.songCount
                         )
                     )
                 }
             }
         }
+    }
+
+    override fun playlistIdsContaining(songId: Long): Flow<Set<Long>> {
+        return playlistDao.playlistIdsContaining(songId).map { it.toSet() }
     }
 
     override fun getPlaylistSongs(idPlaylist: Long): Flow<List<Song>> {

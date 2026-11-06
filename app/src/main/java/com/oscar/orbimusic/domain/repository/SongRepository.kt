@@ -1,7 +1,7 @@
 package com.oscar.orbimusic.domain.repository
 
 import com.oscar.orbimusic.domain.model.Playlist
-import com.oscar.orbimusic.domain.model.PlaylistGroup
+import com.oscar.orbimusic.domain.model.PlaylistSummary
 import com.oscar.orbimusic.domain.model.Song
 import kotlinx.coroutines.flow.Flow
 
@@ -32,8 +32,10 @@ interface SongRepository {
     // ----- Playlists -----
 
     fun getAllPlaylists(): Flow<List<Playlist>>;
-    
-    fun getPlaylistGroups(): Flow<List<PlaylistGroup>>;
+
+    fun getPlaylistSummaries(): Flow<List<PlaylistSummary>>;
+
+    fun playlistIdsContaining(songId: Long): Flow<Set<Long>>;
 
     fun getPlaylistSongs(idPlaylist: Long): Flow<List<Song>>;
 

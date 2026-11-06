@@ -22,12 +22,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -56,7 +61,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.text.style.TextOverflow
+import com.oscar.orbimusic.domain.model.PlaylistSelection
+import com.oscar.orbimusic.domain.model.PlaylistSummary
 import com.oscar.orbimusic.presentation.ui.animations.LocalPlayerAnimatedScope
+import com.oscar.orbimusic.presentation.ui.theme.FavoriteRed
 import com.oscar.orbimusic.presentation.ui.components.MediaSongCard
 import com.oscar.orbimusic.presentation.ui.components.PrevMediaSong
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
@@ -263,26 +273,65 @@ private fun CreatePlaylistDialog(
     }
 }
 
-//Encabezado de cada bloque de la vista agrupada
+//Fila del primer nivel: una playlist como destino, no como encabezado de un
+//bloque de canciones. Favoritos se distingue con su corazon rojo.
 @Composable
-private fun PlaylistHeader(name: String, songCount: Int) {
-    Column(
+private fun PlaylistSummaryRow(
+    summary: PlaylistSummary,
+    onClick: () -> Unit
+) {
+    val isFavorites = summary.id == null
+
+    Row(
         Modifier
             .fillMaxWidth()
-            .padding(start = 10.dp, end = 10.dp, top = 18.dp, bottom = 6.dp)
+            .heightIn(min = 60.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = name,
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = (-0.3).sp
+        Box(
+            Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (isFavorites) Icons.Rounded.Favorite
+                else Icons.Rounded.QueueMusic,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = if (isFavorites) FavoriteRed
+                else MaterialTheme.colorScheme.onSurfaceVariant
             )
-        )
-        Text(
-            text = if (songCount == 1) "1 canción" else "$songCount canciones",
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = summary.name,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = (-0.2).sp
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = if (summary.songCount == 1) "1 canción" else "${summary.songCount} canciones",
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -294,13 +343,40 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
     val songs by mediaViewModel.allSongs.collectAsState();
     val playerState by mediaViewModel.playerState.collectAsState();
     val isExpanded by mediaViewModel.isExpanded.collectAsState();
-    val playlistGroups by mediaViewModel.playlistGroups.collectAsState();
+    //Primer nivel: solo nombres y conteos, sin cargar canciones
+    val playlistSummaries by mediaViewModel.playlistSummaries.collectAsState();
+    //Segundo nivel: cual esta abierta y sus canciones
+    val openPlaylist by mediaViewModel.openPlaylist.collectAsState();
+    val playlistSongs by mediaViewModel.playlistSongs.collectAsState();
     //Un solo Set para toda la pantalla, en vez de una consulta por fila
     val favoriteIds by mediaViewModel.favoriteIds.collectAsState();
 
-    //0 = nombre, 1 = artista, 2 = recientes, 3 = agrupado por playlist
+    //0 = nombre, 1 = artista, 2 = recientes, 3 = playlists
     var selectedFilter by rememberSaveable { mutableIntStateOf(2) }
     val groupedByPlaylist = selectedFilter == 3
+
+    //Dentro de una playlist, el boton de atras cierra el segundo nivel en vez
+    //de salirse de la app
+    BackHandler(enabled = openPlaylist != null) {
+        mediaViewModel.closePlaylist()
+    }
+
+    //Al salir del filtro Playlists se cierra lo que hubiera abierto, para no
+    //regresar despues a un segundo nivel que ya no corresponde
+    LaunchedEffect(groupedByPlaylist) {
+        if (!groupedByPlaylist) mediaViewModel.closePlaylist()
+    }
+
+    //El nombre y conteo de la playlist abierta salen del resumen, que ya los
+    //tiene: no hace falta otra consulta para el encabezado
+    val openSummary = openPlaylist?.let { selection ->
+        playlistSummaries.firstOrNull { summary ->
+            when (selection) {
+                is PlaylistSelection.Favorites -> summary.id == null
+                is PlaylistSelection.Real -> summary.id == selection.id
+            }
+        }
+    }
 
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -316,123 +392,177 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
     Column(Modifier.fillMaxSize()) {
 
-                //El titulo conserva su padding; las pildoras salen de el para
-                //poder scrollear de orilla a orilla
-                Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp)) {
+                //Dentro de una playlist el encabezado se sustituye: las pildoras
+                //ordenan la biblioteca completa y aqui no aplican
+                if (openSummary != null) {
 
-                    Text(
-                        text = "Biblioteca",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = (-0.5).sp
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 10.dp, end = 22.dp, top = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(100))
+                                .clickable { mediaViewModel.closePlaylist() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                                contentDescription = "Regresar a las playlists",
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+
+                        Spacer(Modifier.width(4.dp))
+
+                        Column {
+                            Text(
+                                text = openSummary.name,
+                                style = MaterialTheme.typography.headlineSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = (-0.5).sp
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = if (playlistSongs.size == 1) "1 canción"
+                                else "${playlistSongs.size} canciones",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                } else {
+
+                    //El titulo conserva su padding; las pildoras salen de el para
+                    //poder scrollear de orilla a orilla
+                    Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp)) {
+
+                        Text(
+                            text = "Biblioteca",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = (-0.5).sp
+                            )
                         )
-                    )
 
-                    Spacer(Modifier.height(2.dp))
+                        Spacer(Modifier.height(2.dp))
 
-                    Text(
-                        text = if (groupedByPlaylist) {
-                            if (playlistGroups.size == 1) "1 lista" else "${playlistGroups.size} listas"
-                        } else {
-                            if (songs.size == 1) "1 canción" else "${songs.size} canciones"
-                        },
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                        Text(
+                            text = if (groupedByPlaylist) {
+                                if (playlistSummaries.size == 1) "1 lista" else "${playlistSummaries.size} listas"
+                            } else {
+                                if (songs.size == 1) "1 canción" else "${songs.size} canciones"
+                            },
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Spacer(Modifier.height(18.dp))
+
+                    //LazyRow y no Row: con cuatro pildoras ya no caben en pantallas
+                    //angostas. El margen va en contentPadding y no en el Modifier
+                    //para que al scrollear las pildoras pasen por debajo del borde
+                    //en vez de cortarse contra un padding fijo.
+                    LazyRow(
+                        Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 22.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        item {
+                            FilterPill("Nombre", selectedFilter == 0) {
+                                selectedFilter = 0
+                                mediaViewModel.loadAllSongsByTitle()
+                            }
+                        }
+                        item {
+                            FilterPill("Artista", selectedFilter == 1) {
+                                selectedFilter = 1
+                                mediaViewModel.loadAllSongsByArtist()
+                            }
+                        }
+                        item {
+                            FilterPill("Recientes", selectedFilter == 2) {
+                                selectedFilter = 2
+                                mediaViewModel.loadAllSongs()
+                            }
+                        }
+                        item {
+                            //No recarga allSongs: cambia la forma de la lista, no su orden
+                            FilterPill("Playlists", selectedFilter == 3) {
+                                selectedFilter = 3
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
                 }
-
-                Spacer(Modifier.height(18.dp))
-
-                //LazyRow y no Row: con cuatro pildoras ya no caben en pantallas
-                //angostas. El margen va en contentPadding y no en el Modifier
-                //para que al scrollear las pildoras pasen por debajo del borde
-                //en vez de cortarse contra un padding fijo.
-                LazyRow(
-                    Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 22.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    item {
-                        FilterPill("Nombre", selectedFilter == 0) {
-                            selectedFilter = 0
-                            mediaViewModel.loadAllSongsByTitle()
-                        }
-                    }
-                    item {
-                        FilterPill("Artista", selectedFilter == 1) {
-                            selectedFilter = 1
-                            mediaViewModel.loadAllSongsByArtist()
-                        }
-                    }
-                    item {
-                        FilterPill("Recientes", selectedFilter == 2) {
-                            selectedFilter = 2
-                            mediaViewModel.loadAllSongs()
-                        }
-                    }
-                    item {
-                        //No recarga allSongs: cambia la forma de la lista, no su orden
-                        FilterPill("Playlists", selectedFilter == 3) {
-                            selectedFilter = 3
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
 
                 LazyColumn(
                     Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    if (groupedByPlaylist) {
+                    //SEGUNDO NIVEL: las canciones de la playlist abierta
+                    if (openSummary != null) {
+
+                        if (playlistSongs.isEmpty()) {
+                            item(key = "empty-playlist") {
+                                Text(
+                                    text = "Todavía no hay canciones aquí. Agrégalas desde el reproductor.",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+
+                        itemsIndexed(playlistSongs, key = { _, song -> song.id }) { index, song ->
+                            MediaSongCard(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    //playSongs y no playSong: la cola es la
+                                    //playlist, no la biblioteca completa
+                                    .clickable(onClick = {
+                                        mediaViewModel.playSongs(playlistSongs, index)
+                                    }),
+                                title = song.title,
+                                artist = song.artist,
+                                albumArt = song.albumArtPath,
+                                duration = song.duration,
+                                isPlaying = playerState.currentSong?.path == song.path && playerState.isPlaying,
+                                isFavorite = song.id in favoriteIds,
+                                onToggleFavorite = { mediaViewModel.toggleFavorite(song.id) }
+                            )
+                        }
+
+                    //PRIMER NIVEL: solo los nombres de las playlists
+                    } else if (groupedByPlaylist) {
 
                         item(key = "new-playlist") {
                             NewPlaylistRow(onClick = { showCreateDialog = true })
                         }
 
-                        playlistGroups.forEach { group ->
-
-                            item(key = "header-${group.id}") {
-                                PlaylistHeader(group.name, group.songs.size)
-                            }
-
-                            if (group.songs.isEmpty()) {
-                                item(key = "empty-${group.id}") {
-                                    Text(
-                                        text = "Todavía no hay canciones aquí",
-                                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        items(playlistSummaries, key = { it.id ?: -1L }) { summary ->
+                            PlaylistSummaryRow(
+                                summary = summary,
+                                onClick = {
+                                    mediaViewModel.openPlaylist(
+                                        if (summary.id == null) PlaylistSelection.Favorites
+                                        else PlaylistSelection.Real(summary.id)
                                     )
                                 }
-                            }
-
-                            //La key combina grupo y cancion: la misma cancion
-                            //puede estar en varias playlists, y dos items con
-                            //la misma key truenan el LazyColumn.
-                            itemsIndexed(
-                                group.songs,
-                                key = { _, song -> "${group.id}-${song.id}" }
-                            ) { index, song ->
-                                MediaSongCard(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(10.dp))
-                                        //playSongs y no playSong: la cola es la
-                                        //playlist, no la biblioteca completa
-                                        .clickable(onClick = {
-                                            mediaViewModel.playSongs(group.songs, index)
-                                        }),
-                                    title = song.title,
-                                    artist = song.artist,
-                                    albumArt = song.albumArtPath,
-                                    duration = song.duration,
-                                    isPlaying = playerState.currentSong?.path == song.path && playerState.isPlaying,
-                                    isFavorite = song.id in favoriteIds,
-                                    onToggleFavorite = { mediaViewModel.toggleFavorite(song.id) }
-                                )
-                            }
+                            )
                         }
+
                     } else {
                         itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
                             MediaSongCard(

@@ -17,27 +17,13 @@ data class PlaylistWithCount(
 )
 
 
-//Una cancion junto con la playlist a la que pertenece. Sirve para traer el
-//contenido de todas las playlists de un jalon y agruparlo en memoria.
-data class PlaylistSongRow(
-    val idPlaylist: Long,
-    @Embedded val song: SongEntity
-)
-
-
 //INTERFACE DONDE SE EJECUTAN LAS ACCIONES SOBRE PLAYLISTS Y SU DETALLE
 @Dao
 interface PlaylistDao {
 
-    //Las canciones de TODAS las playlists en una sola consulta, para la vista
-    //agrupada.
-    @Query("""
-        SELECT playlistDetalle.idPlaylist AS idPlaylist, songs.*
-        FROM playlistDetalle
-        INNER JOIN songs ON songs.id = playlistDetalle.songId
-        ORDER BY playlistDetalle.idPlaylist, playlistDetalle.position
-    """)
-    fun getAllPlaylistSongs(): Flow<List<PlaylistSongRow>>
+
+    @Query("SELECT idPlaylist FROM playlistDetalle WHERE songId = :songId")
+    fun playlistIdsContaining(songId: Long): Flow<List<Long>>
 
     //Obtiene todas las playlist registradas
     @Query("SELECT * FROM playlist ORDER BY createdAt DESC")

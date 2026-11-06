@@ -128,9 +128,13 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
     val favoriteIds by mediaViewModel.favoriteIds.collectAsState()
     val isFavorite = song != null && song.id in favoriteIds
 
-    //playlistGroups ya trae las canciones de cada lista, asi que el selector
-    //puede marcar cuales contienen esta cancion sin ninguna consulta extra
-    val playlistGroups by mediaViewModel.playlistGroups.collectAsState()
+    val playlistSummaries by mediaViewModel.playlistSummaries.collectAsState()
+
+    //Consulta chica: solo los ids de las playlists que ya tienen esta cancion.
+    //Se vuelve a crear cuando cambia la cancion, de ahi el remember con llave.
+    val playlistIdsWithSong by remember(song?.id) {
+        mediaViewModel.playlistIdsContaining(song?.id ?: -1L)
+    }.collectAsState(initial = emptySet())
     //remember y no rememberSaveable: el expandido se cierra al rotar de todos modos
     var showPlaylistPicker by remember { mutableStateOf(false) }
 
@@ -451,9 +455,9 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
     if (showPlaylistPicker && song != null) {
         AddToPlaylistDialog(
             songTitle = song.title,
-            songId = song.id,
             //Favoritos (id == null) queda fuera: a eso se entra por el corazon
-            playlists = playlistGroups.filter { it.id != null },
+            playlists = playlistSummaries.filter { it.id != null },
+            playlistIdsWithSong = playlistIdsWithSong,
             onSelect = { idPlaylist ->
                 mediaViewModel.addSongToPlaylist(idPlaylist, song.id)
             },

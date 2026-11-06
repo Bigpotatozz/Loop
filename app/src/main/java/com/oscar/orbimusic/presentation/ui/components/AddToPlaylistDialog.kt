@@ -32,13 +32,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.oscar.orbimusic.domain.model.PlaylistGroup
+import com.oscar.orbimusic.domain.model.PlaylistSummary
 
+//playlistIdsWithSong viene de una consulta que devuelve solo ids. Antes se
+//recibian las playlists con todas sus canciones y se buscaba dentro; eso
+//obligaba a cargar la biblioteca entera para marcar un par de palomitas.
 @Composable
 fun AddToPlaylistDialog(
     songTitle: String,
-    songId: Long,
-    playlists: List<PlaylistGroup>,
+    playlists: List<PlaylistSummary>,
+    playlistIdsWithSong: Set<Long>,
     onSelect: (Long) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -81,12 +84,10 @@ fun AddToPlaylistDialog(
                 } else {
                     LazyColumn(Modifier.heightIn(max = 320.dp)) {
                         items(playlists, key = { it.id ?: -1L }) { playlist ->
-                            val alreadyIn = playlist.songs.any { it.id == songId }
-
                             PlaylistPickerRow(
                                 name = playlist.name,
-                                songCount = playlist.songs.size,
-                                alreadyIn = alreadyIn,
+                                songCount = playlist.songCount,
+                                alreadyIn = playlist.id in playlistIdsWithSong,
                                 onClick = { playlist.id?.let(onSelect) }
                             )
                         }
