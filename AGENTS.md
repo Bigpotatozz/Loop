@@ -93,8 +93,9 @@ esta pantalla no se ha tocado; la lista, el mini-player y el expandido sí.
 
 ## Idea: personalización a partir del uso (sin diseñar)
 
-**Estado:** idea del usuario, con un análisis de viabilidad hecho. **No hay
-diseño ni plan.** Cuando se retome, empezar por brainstorming y escribir un
+**Estado:** idea del usuario, con un análisis de viabilidad hecho. **El modelo
+de datos ya está decidido** (ver la sección siguiente), pero **no hay diseño de
+UI ni plan.** Cuando se retome, empezar por brainstorming y escribir un
 documento antes de tocar código — es un proyecto, no un retoque.
 
 ### La idea, en sus palabras
@@ -160,19 +161,137 @@ estadísticas agrupan mal y la función queda rara sin que se entienda por qué.
 artista salen limpios.** La idea es viable por ese lado, pero conviene
 revisarlo otra vez si la biblioteca crece mucho.
 
-### Tablas que haría falta modelar
+### Tablas: lo que ya existe
 
-Nada de esto existe hoy; la base tiene una sola tabla (`songs`).
+Favoritos y playlists **ya están construidos** (esta sección se escribió antes):
 
-- `play_history` — una fila por escucha (`songId`, `playedAt`)
-- `playlists` + `playlist_songs` — relación muchos a muchos
-- favoritos: columna en `songs` o tabla aparte, sin decidir
+- `favorites` — `songId` como PK, FK a `songs` con `CASCADE`
+- `playlist` + `playlistDetalle` — muchos a muchos, con llave compuesta,
+  `position` para el orden y `CASCADE` en las dos FK
 
-**Aviso importante:** `SongDatabase` usa `fallbackToDestructiveMigration()`,
-que **borra la base entera** al cambiar de versión. Hoy no duele porque todo
-se regenera escaneando la carpeta, pero estas tablas guardan datos que **solo
-viven en la base**. Antes de crearlas hay que poner `exportSchema = true` y
-escribir migraciones de verdad.
+Falta `play_history`, y su modelo **ya está decidido** (ver abajo).
+
+---
+
+## Modelo de datos de analíticas — DECIDIDO, sin implementar
+
+Acordado en conversación. No hay código ni UI; el esquema sí está cerrado,
+y varias decisiones son difíciles de revertir después.
+
+### La decisión de fondo: eventos, no agregados
+
+Una fila por reproducción. Los agregados —veces, última vez, tiempo total—
+salen por SQL con `COUNT`, `MAX` y `SUM`.
+
+**Se descartó una tabla `data` 1:1 con los agregados precalculados.** Es el
+mismo error que el `songsNumber` que ya se quitó de `PlaylistEntity`: el mismo
+dato guardado dos veces, que se desincroniza en cuanto se escapa una
+actualización. Con eventos hay una sola verdad.
+
+Si algún día agregar se pone lento, se añade una tabla de caché **entonces**;
+los eventos siguen siendo la fuente.
+
+### Esquema acordado
+
+```
+play_history
+├─ id        Long     PK autogenerado
+├─ songId    Long     FK → songs(id), ON DELETE CASCADE
+├─ playedAt  Long     epoch ms
+├─ msPlayed  Long     cuánto se escuchó de verdad
+├─ shuffle   Boolean  si venía del aleatorio
+└─ source    String   biblioteca / playlist:<id> / favoritos
+
+Índices: songId y playedAt
+```
+
+Los dos índices hacen falta: `songId` por ser columna hija de la FK (mismo
+criterio que `playlistDetalle`), y `playedAt` porque **toda** consulta de
+"del mes" filtra por rango de fecha.
+
+La duración sale por JOIN contra `songs`, no se guarda aquí.
+
+**Por qué cada columna no obvia:**
+
+- `msPlayed` — distingue escuchar de abrir y saltar. Es lo que convierte el
+  contador en señal de gusto. Además resuelve el viejo problema de "cuándo
+  cuenta como reproducida": se guarda todo y se filtra en la consulta.
+- `shuffle` — separa **lo que elegiste** de **lo que te tocó**. Permite dos
+  rankings distintos; sin ella el aleatorio infla a las canciones que solo
+  están ahí.
+- `source` — no se deriva de nada. Es la única forma de saber qué playlists se
+  usan de verdad, y lo que alimenta el accionable de "playlists que nunca abres".
+
+### Evaluado y descartado, con su razón
+
+Para no volver a discutirlo:
+
+- **`songDurationMs` (snapshot).** La duración sale por JOIN. Solo haría falta
+  si se decidiera que el historial **sobreviva a borrar la canción**, lo que
+  implicaría quitar el `CASCADE` y guardar también título y artista. Se decidió
+  que el historial se vaya con la canción.
+- **`endReason`.** Mayormente derivable de la secuencia: `msPlayed` cercano a la
+  duración = terminó; corto y con otra reproducción segundos después = saltada;
+  corto y sin nada después = abandonada. La columna haría las consultas más
+  simples, no posibles.
+- **Hora local (0-23).** Solo importa si el usuario cambia de zona horaria. Si
+  pasa, los mapas de calor de horario se desplazan.
+- **Audífonos, batería, red.** Capturables y sin nada que mostrar.
+
+### El principio, por si se retoma
+
+Capturar lo que **solo existe en ese instante**; no capturar lo que se puede
+calcular después. Y recordar que añadir una columna más tarde es fácil, pero
+**las filas viejas se quedan en NULL para siempre**.
+
+### Sobre la mesa, sin decidir
+
+Una tabla de **búsquedas**: qué se buscó y si terminó en descarga. Sería el
+insumo real de la idea de "accesos directos a tus artistas" de arriba. Hoy no
+se guarda nada de eso.
+
+### ⚠️ Bloqueante antes de crear la tabla
+
+`SongDatabase` usa `fallbackToDestructiveMigration()`, que **borra la base
+entera** al subir de versión.
+
+Cuando se escribió el aviso original, no había datos que solo vivieran en la
+base. **Ahora sí**: favoritos y playlists. `play_history` sería el tercero y el
+más doloroso — meses de historial que nada puede reconstruir, a diferencia de
+las canciones, que se regeneran escaneando.
+
+Esto pasó de "conviene arreglarlo" a **bloqueante**: `exportSchema = true` y
+migraciones de verdad **antes** de crear la tabla.
+
+### Catálogo de métricas
+
+**Ya construibles hoy, sin historial** — útiles porque las primeras semanas el
+historial estará vacío:
+
+- Total de canciones, duración acumulada y espacio en disco
+- Crecimiento de la biblioteca por mes (`songs.dateAdded`)
+- Artista del que más canciones se tienen
+- Cuándo se marcan favoritos (`favorites.addedAt`), y qué % de la biblioteca son
+- Canciones huérfanas: ni favoritas ni en ninguna playlist
+- Canciones sin carátula o con metadatos sucios
+
+**Con `play_history`:** minutos por periodo, top canciones y artistas (por veces
+y por tiempo, que dan rankings distintos), mapa de calor hora × día, rachas,
+descubrimientos del mes, artistas abandonados. Con `msPlayed`: tasa de
+finalización y canciones que siempre se saltan. Con `source`: qué playlists se
+usan de verdad.
+
+**Accionables** — los que más valen porque conectan con lo ya construido:
+
+- "Márcala como favorita" — muchas escuchas, sin corazón
+- "Candidatas a borrar" — nunca escuchadas + antiguas, con los MB que liberan
+  (engancha con el borrado desde la biblioteca)
+- "Vuelve a escucharla" — gustaba y se dejó
+- "Tu top del mes como playlist" — usando `createPlaylist` y `addSongToPlaylist`
+
+**Nota de diseño:** las primeras semanas no habrá datos. Los bloques tienen que
+verse bien con poco o no aparecer hasta tener suficiente; un "top del mes" con
+tres reproducciones se ve triste.
 
 ---
 
