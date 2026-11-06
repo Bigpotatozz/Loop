@@ -8,9 +8,11 @@ import com.oscar.orbimusic.data.local.database.PlaylistWithCount
 import com.oscar.orbimusic.data.local.database.SongDao
 import com.oscar.orbimusic.data.local.database.SongEntity
 import com.oscar.orbimusic.domain.model.Playlist
+import com.oscar.orbimusic.domain.model.PlaylistGroup
 import com.oscar.orbimusic.domain.model.Song
 import com.oscar.orbimusic.domain.repository.SongRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 class SongRepositoryImpl(
@@ -80,6 +82,43 @@ class SongRepositoryImpl(
     override fun getAllPlaylists(): Flow<List<Playlist>> {
         return playlistDao.getAllPlaylistsWithCount().map { rows ->
             rows.map { it.toDomainModel() }
+        }
+    }
+
+    override fun getPlaylistGroups(): Flow<List<PlaylistGroup>> {
+        return combine(
+            favoritesDao.getFavoriteSongs(),
+            playlistDao.getAllPlaylistsWithCount(),
+            playlistDao.getAllPlaylistSongs()
+        ) { favorites, playlists, rows ->
+
+            val songsByPlaylist = rows.groupBy(
+                keySelector = { it.idPlaylist },
+                valueTransform = { it.song.toDomainModel() }
+            )
+
+            buildList {
+                //Favoritos va primero y siempre aparece, aunque este vacio
+                add(
+                    PlaylistGroup(
+                        id = null,
+                        name = "Favoritos",
+                        songs = favorites.map { it.toDomainModel() }
+                    )
+                )
+
+                playlists.forEach { row ->
+                    add(
+                        PlaylistGroup(
+                            id = row.playlist.idPlaylist,
+                            name = row.playlist.nombre,
+                            //orEmpty porque una playlist sin canciones no
+                            //aparece en el resultado del JOIN
+                            songs = songsByPlaylist[row.playlist.idPlaylist].orEmpty()
+                        )
+                    )
+                }
+            }
         }
     }
 

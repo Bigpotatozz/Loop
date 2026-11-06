@@ -8,12 +8,19 @@ import androidx.lifecycle.viewModelScope
 import com.oscar.orbimusic.data.audio.AudioPlayerService
 import com.oscar.orbimusic.data.audio.AudioServiceConnection
 import com.oscar.orbimusic.domain.model.PlayerState
+import com.oscar.orbimusic.domain.model.Playlist
+import com.oscar.orbimusic.domain.model.PlaylistGroup
 import com.oscar.orbimusic.domain.model.Song
 import com.oscar.orbimusic.domain.repository.SongRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.random.Random
@@ -147,6 +154,108 @@ class MediaViewModel (private val songRepository: SongRepository,
         }
     }
 
+
+
+    // ---------- FAVORITOS ----------
+
+    val favoriteIds: StateFlow<Set<Long>> = songRepository.getFavoriteIds()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    //La lista de favoritos, ya como canciones completas
+    val favoriteSongs: StateFlow<List<Song>> = songRepository.getFavoriteSongs()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    //Marca o desmarca. No hay que leer el estado antes: el repositorio lo
+    //resuelve en una sola operacion.
+    fun toggleFavorite(songId: Long) {
+        viewModelScope.launch {
+            songRepository.toggleFavorite(songId)
+        }
+    }
+
+
+    // ---------- PLAYLISTS ----------
+
+    //Cada playlist ya trae su conteo de canciones
+    val playlists: StateFlow<List<Playlist>> = songRepository.getAllPlaylists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    //Para la vista agrupada de la biblioteca: Favoritos y luego cada playlist
+    //con sus canciones
+    val playlistGroups: StateFlow<List<PlaylistGroup>> = songRepository.getPlaylistGroups()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    //Que playlist esta abierta. Null = ninguna.
+    private val _selectedPlaylistId = MutableStateFlow<Long?>(null);
+    val selectedPlaylistId: StateFlow<Long?> = _selectedPlaylistId.asStateFlow();
+
+    //Las canciones de la playlist abierta.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val playlistSongs: StateFlow<List<Song>> = _selectedPlaylistId
+        .flatMapLatest { id ->
+            if (id == null) flowOf(emptyList())
+            else songRepository.getPlaylistSongs(id)
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun selectPlaylist(idPlaylist: Long?) {
+        _selectedPlaylistId.value = idPlaylist;
+    }
+
+    //Devuelve el id de la playlist nueva por si la pantalla quiere abrirla
+    fun createPlaylist(name: String, description: String = "", onCreated: (Long) -> Unit = {}) {
+        viewModelScope.launch {
+            onCreated(songRepository.createPlaylist(name, description))
+        }
+    }
+
+    fun deletePlaylist(idPlaylist: Long) {
+        viewModelScope.launch {
+            songRepository.deletePlaylist(idPlaylist)
+            //Si estaba abierta, se cierra: su id ya no existe
+            if (_selectedPlaylistId.value == idPlaylist) _selectedPlaylistId.value = null
+        }
+    }
+
+    fun addSongToPlaylist(idPlaylist: Long, songId: Long) {
+        viewModelScope.launch {
+            songRepository.addSongToPlaylist(idPlaylist, songId)
+        }
+    }
+
+    fun removeSongFromPlaylist(idPlaylist: Long, songId: Long) {
+        viewModelScope.launch {
+            songRepository.removeSongFromPlaylist(idPlaylist, songId)
+        }
+    }
+
+    //Recibe la lista completa en su orden final, no un movimiento suelto
+    fun reorderPlaylist(idPlaylist: Long, songIdsInOrder: List<Long>) {
+        viewModelScope.launch {
+            songRepository.reorderPlaylist(idPlaylist, songIdsInOrder)
+        }
+    }
+
+
+    //Reproduce una lista cualquiera como cola.
+    fun playSongs(songs: List<Song>, index: Int = 0) {
+        if (songs.isEmpty()) return
+        val safeIndex = index.coerceIn(0, songs.lastIndex)
+
+        _playerState.update { currentState ->
+            currentState.copy(
+                currentSong = songs[safeIndex],
+                isPlaying = true,
+                currentIndex = safeIndex,
+                queue = songs
+            )
+        }
+
+        _currentPosition.value = 0L
+
+        audioService?.setPlaylist(songs, safeIndex)
+        audioService?.play()
+    }
 
 
     fun playSong(song: Song?, index: Int = 0) {
