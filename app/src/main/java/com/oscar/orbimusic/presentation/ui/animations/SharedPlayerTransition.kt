@@ -20,10 +20,18 @@ import androidx.compose.ui.unit.dp
 val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { null }
 val LocalPlayerAnimatedScope = compositionLocalOf<AnimatedVisibilityScope?> { null }
 
+//Scope de la transicion lista de playlists <-> detalle. Va aparte del anterior
+//porque lo provee otro AnimatedContent, el de MediaScreen, no el del player.
+val LocalPlaylistAnimatedScope = compositionLocalOf<AnimatedVisibilityScope?> { null }
+
 //Claves de los elementos que viajan de la barrita al expandido
 const val PlayerArtKey = "player-art"
 const val PlayerTitleKey = "player-title"
 const val PlayerContainerKey = "player-container"
+
+//Una clave por playlist: cada fila tiene su propia caratula viajando.
+//Favoritos no tiene id en la tabla, de ahi el "fav".
+fun playlistCoverKey(id: Long?) = "playlist-cover-${id ?: "fav"}"
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 private val playerBounds = BoundsTransform { _, _ ->
@@ -42,6 +50,23 @@ fun Modifier.sharedPlayerElement(key: String): Modifier {
 
     return with(sharedScope) {
         this@sharedPlayerElement.sharedElement(
+            sharedContentState = rememberSharedContentState(key = key),
+            animatedVisibilityScope = animatedScope,
+            boundsTransform = playerBounds
+        )
+    }
+}
+
+//Igual que sharedPlayerElement pero con el scope de las playlists. Mismo
+//BoundsTransform para que las dos animaciones de la app se sientan iguales.
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun Modifier.sharedPlaylistElement(key: String): Modifier {
+    val sharedScope = LocalSharedTransitionScope.current ?: return this
+    val animatedScope = LocalPlaylistAnimatedScope.current ?: return this
+
+    return with(sharedScope) {
+        this@sharedPlaylistElement.sharedElement(
             sharedContentState = rememberSharedContentState(key = key),
             animatedVisibilityScope = animatedScope,
             boundsTransform = playerBounds

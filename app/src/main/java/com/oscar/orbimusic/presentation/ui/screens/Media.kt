@@ -1,9 +1,11 @@
 package com.oscar.orbimusic.presentation.ui.screens
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -33,7 +36,9 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -69,8 +74,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.oscar.orbimusic.domain.model.PlaylistSelection
 import com.oscar.orbimusic.domain.model.PlaylistSummary
+import com.oscar.orbimusic.domain.model.Song
 import com.oscar.orbimusic.presentation.ui.animations.LocalPlayerAnimatedScope
+import com.oscar.orbimusic.presentation.ui.animations.LocalPlaylistAnimatedScope
+import com.oscar.orbimusic.presentation.ui.animations.playlistCoverKey
+import com.oscar.orbimusic.presentation.ui.animations.sharedPlaylistElement
 import com.oscar.orbimusic.presentation.ui.theme.FavoriteRed
+import com.oscar.orbimusic.presentation.utils.parseTotalTime
+import kotlin.random.Random
 import com.oscar.orbimusic.presentation.ui.components.MediaSongCard
 import com.oscar.orbimusic.presentation.ui.components.PrevMediaSong
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
@@ -124,8 +135,6 @@ private fun NewPlaylistRow(onClick: () -> Unit) {
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        //Cuadro del mismo ancho que una caratula, para que el texto arranque
-        //alineado con el de las canciones de abajo
         Box(
             Modifier
                 .size(40.dp)
@@ -152,12 +161,6 @@ private fun NewPlaylistRow(onClick: () -> Unit) {
         )
     }
 }
-
-//Dialog crudo en lugar de AlertDialog: el de Material impone su propio
-//encabezado, tipografia y fila de botones, y se veia ajeno al resto. Aqui el
-//encabezado usa el mismo estilo que "Biblioteca", el campo el del buscador de
-//la pantalla de descargas, y el boton la forma de una pildora de filtro activa.
-//El texto vive dentro del dialogo: al cerrarse se va con el.
 @Composable
 private fun CreatePlaylistDialog(
     onDismiss: () -> Unit,
@@ -166,8 +169,6 @@ private fun CreatePlaylistDialog(
     var name by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
 
-    //El dialogo existe para escribir un nombre: el teclado deberia estar listo
-    //sin que el usuario tenga que tocar el campo
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -246,10 +247,6 @@ private fun CreatePlaylistDialog(
                     )
 
                     Spacer(Modifier.width(8.dp))
-
-                    //Misma forma y colores que una FilterPill seleccionada.
-                    //En blanco no se puede crear: una playlist sin nombre no se
-                    //podria distinguir en la lista.
                     val enabled = name.isNotBlank()
                     Text(
                         text = "Crear",
@@ -277,10 +274,6 @@ private fun CreatePlaylistDialog(
     }
 }
 
-//La portada de una playlist: un mosaico con sus primeras cuatro caratulas.
-//
-//Con menos de cuatro se usa una sola imagen a sangre completa. Un 2x2 con
-//huecos se ve roto; una imagen sola se ve intencional.
 @Composable
 private fun PlaylistCoverMosaic(
     coverPaths: List<String>,
@@ -336,9 +329,168 @@ private fun PlaylistCoverMosaic(
 }
 
 
-//Fila del primer nivel: una playlist como destino, no como encabezado de un
-//bloque de canciones. Las medidas son las de MediaSongCard a proposito, para
-//que al cambiar de filtro las filas no brinquen de tamaño.
+//Boton de la cabecera del detalle. Misma forma que una FilterPill: relleno
+//para la accion principal, con borde para la secundaria.
+@Composable
+private fun PlaylistActionButton(
+    label: String,
+    icon: ImageVector,
+    filled: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(100)
+    //Deshabilitado se apaga pero conserva la forma, para que no parezca que
+    //desaparecio un boton
+    val contentColor = when {
+        !enabled -> MaterialTheme.colorScheme.onSurfaceVariant
+        filled -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.secondary
+    }
+
+    Row(
+        modifier
+            .clip(shape)
+            .background(
+                when {
+                    !enabled -> MaterialTheme.colorScheme.surfaceVariant
+                    filled -> MaterialTheme.colorScheme.secondary
+                    else -> Color.Transparent
+                }
+            )
+            .border(
+                width = 1.dp,
+                color = if (!filled && enabled) MaterialTheme.colorScheme.outline
+                else Color.Transparent,
+                shape = shape
+            )
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 11.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = contentColor
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge.copy(
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            ),
+            color = contentColor
+        )
+    }
+}
+
+
+//Cabecera del detalle. Va como primer item del LazyColumn y no fija arriba,
+//para que se vaya con el scroll y la pantalla quede para las canciones.
+@Composable
+private fun PlaylistDetailHeader(
+    summary: PlaylistSummary,
+    songs: List<Song>,
+    onBack: () -> Unit,
+    onPlay: () -> Unit,
+    onShuffle: () -> Unit
+) {
+    val isFavorites = summary.id == null
+    val hasSongs = songs.isNotEmpty()
+
+    Column(Modifier.fillMaxWidth()) {
+
+        Box(
+            Modifier
+                .padding(start = 2.dp, top = 8.dp)
+                .size(44.dp)
+                .clip(RoundedCornerShape(100))
+                .clickable(onClick = onBack),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = "Regresar a las playlists",
+                tint = MaterialTheme.colorScheme.secondary
+            )
+        }
+
+        Spacer(Modifier.height(4.dp))
+
+        //La misma clave que la fila del primer nivel: eso es lo que hace que
+        //la caratula viaje en vez de aparecer de golpe
+        PlaylistCoverMosaic(
+            coverPaths = summary.coverPaths,
+            fallbackIcon = if (isFavorites) Icons.Rounded.Favorite
+            else Icons.Rounded.QueueMusic,
+            fallbackTint = if (isFavorites) FavoriteRed
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .size(180.dp)
+                .sharedPlaylistElement(playlistCoverKey(summary.id))
+                .clip(RoundedCornerShape(16.dp))
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        Column(Modifier.padding(horizontal = 12.dp)) {
+            Text(
+                text = summary.name,
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.5).sp
+                ),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(Modifier.height(3.dp))
+
+            Text(
+                text = buildString {
+                    append(if (songs.size == 1) "1 canción" else "${songs.size} canciones")
+                    if (hasSongs) {
+                        append(" · ")
+                        append(parseTotalTime(songs.sumOf { it.duration }))
+                    }
+                },
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(Modifier.height(18.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PlaylistActionButton(
+                    label = "Reproducir",
+                    icon = Icons.Rounded.PlayArrow,
+                    filled = true,
+                    enabled = hasSongs,
+                    onClick = onPlay,
+                    modifier = Modifier.weight(1f)
+                )
+                PlaylistActionButton(
+                    label = "Aleatorio",
+                    icon = Icons.Rounded.Shuffle,
+                    filled = false,
+                    enabled = hasSongs,
+                    onClick = onShuffle,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+
 @Composable
 private fun PlaylistSummaryRow(
     summary: PlaylistSummary,
@@ -364,6 +516,7 @@ private fun PlaylistSummaryRow(
             else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
                 .size(56.dp)
+                .sharedPlaylistElement(playlistCoverKey(summary.id))
                 .clip(RoundedCornerShape(8.dp))
         )
 
@@ -426,16 +579,10 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
         if (!groupedByPlaylist) mediaViewModel.closePlaylist()
     }
 
-    //El nombre y conteo de la playlist abierta salen del resumen, que ya los
-    //tiene: no hace falta otra consulta para el encabezado
-    val openSummary = openPlaylist?.let { selection ->
-        playlistSummaries.firstOrNull { summary ->
-            when (selection) {
-                is PlaylistSelection.Favorites -> summary.id == null
-                is PlaylistSelection.Real -> summary.id == selection.id
-            }
-        }
-    }
+    //El scroll del primer nivel se iza fuera del AnimatedContent: si viviera
+    //dentro, entrar a una playlist desmontaria esa rama y al volver la lista
+    //arrancaria desde arriba
+    val topLevelListState = rememberLazyListState()
 
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -451,54 +598,51 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
     Column(Modifier.fillMaxSize()) {
 
-                //Dentro de una playlist el encabezado se sustituye: las pildoras
-                //ordenan la biblioteca completa y aqui no aplican
-                if (openSummary != null) {
+        //targetState es openPlaylist y NO el resumen: el resumen es un objeto
+        //nuevo en cada emision del Flow, asi que la animacion se relanzaria
+        //cada vez que cambiara cualquier cosa de la base. PlaylistSelection es
+        //estable por igualdad.
+        AnimatedContent(
+            targetState = openPlaylist,
+            modifier = Modifier.weight(1f),
+            //Fundido suave a proposito: el protagonismo lo lleva la caratula
+            //que viaja, y una transicion fuerte encima compite con ella
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            label = "playlist-level"
+        ) { selection ->
 
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(start = 10.dp, end = 22.dp, top = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(100))
-                                .clickable { mediaViewModel.closePlaylist() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                                contentDescription = "Regresar a las playlists",
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                        }
+            //Sin este scope, sharedPlaylistElement se vuelve transparente y la
+            //caratula aparece de golpe en lugar de crecer
+            CompositionLocalProvider(LocalPlaylistAnimatedScope provides this) {
 
-                        Spacer(Modifier.width(4.dp))
-
-                        Column {
-                            Text(
-                                text = openSummary.name,
-                                style = MaterialTheme.typography.headlineSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = (-0.5).sp
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = if (playlistSongs.size == 1) "1 canción"
-                                else "${playlistSongs.size} canciones",
-                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                //Se busca con selection y no con openPlaylist: mientras esta
+                //rama se desvanece, openPlaylist ya cambio
+                val openSummary = selection?.let { sel ->
+                    playlistSummaries.firstOrNull { summary ->
+                        when (sel) {
+                            is PlaylistSelection.Favorites -> summary.id == null
+                            is PlaylistSelection.Real -> summary.id == sel.id
                         }
                     }
+                }
 
-                    Spacer(Modifier.height(12.dp))
+                //Al cerrar, el Flow emite vacio de inmediato y el detalle que
+                //sale parpadearia a cero canciones. Mientras esta rama es la
+                //activa sigue en vivo; cuando deja de serlo, se congela.
+                var branchSongs by remember { mutableStateOf(playlistSongs) }
+                if (selection == openPlaylist) branchSongs = playlistSongs
 
-                } else {
+                //Los dos remember van sin condicion: un remember dentro de un
+                //if cambia de posicion en la slot table si la condicion cambia,
+                //y el estado se pierde o se confunde. La eleccion va despues.
+                val detailListState = rememberLazyListState()
+                val listState = if (openSummary == null) topLevelListState else detailListState
+
+                Column(Modifier.fillMaxSize()) {
+
+                //Dentro de una playlist el encabezado se sustituye: las pildoras
+                //ordenan la biblioteca completa y aqui no aplican
+                if (openSummary == null) {
 
                     //El titulo conserva su padding; las pildoras salen de el para
                     //poder scrollear de orilla a orilla
@@ -527,10 +671,6 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
                     Spacer(Modifier.height(18.dp))
 
-                    //LazyRow y no Row: con cuatro pildoras ya no caben en pantallas
-                    //angostas. El margen va en contentPadding y no en el Modifier
-                    //para que al scrollear las pildoras pasen por debajo del borde
-                    //en vez de cortarse contra un padding fijo.
                     LazyRow(
                         Modifier.fillMaxWidth(),
                         contentPadding = PaddingValues(horizontal = 22.dp),
@@ -567,13 +707,34 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
                 LazyColumn(
                     Modifier.weight(1f),
+                    //El izado conserva el scroll del primer nivel al ir y venir;
+                    //el del detalle es propio y arranca desde arriba
+                    state = listState,
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     //SEGUNDO NIVEL: las canciones de la playlist abierta
                     if (openSummary != null) {
 
-                        if (playlistSongs.isEmpty()) {
+                        item(key = "detail-header") {
+                            PlaylistDetailHeader(
+                                summary = openSummary,
+                                songs = branchSongs,
+                                onBack = { mediaViewModel.closePlaylist() },
+                                onPlay = { mediaViewModel.playSongs(branchSongs, 0) },
+                                onShuffle = {
+                                    //Se activa el modo y se arranca en una al
+                                    //azar; playNext ya respeta el shuffle
+                                    mediaViewModel.setShuffle(true)
+                                    mediaViewModel.playSongs(
+                                        branchSongs,
+                                        Random.nextInt(branchSongs.size)
+                                    )
+                                }
+                            )
+                        }
+
+                        if (branchSongs.isEmpty()) {
                             item(key = "empty-playlist") {
                                 Text(
                                     text = "Todavía no hay canciones aquí. Agrégalas desde el reproductor.",
@@ -584,14 +745,14 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                             }
                         }
 
-                        itemsIndexed(playlistSongs, key = { _, song -> song.id }) { index, song ->
+                        itemsIndexed(branchSongs, key = { _, song -> song.id }) { index, song ->
                             MediaSongCard(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(10.dp))
                                     //playSongs y no playSong: la cola es la
                                     //playlist, no la biblioteca completa
                                     .clickable(onClick = {
-                                        mediaViewModel.playSongs(playlistSongs, index)
+                                        mediaViewModel.playSongs(branchSongs, index)
                                     }),
                                 title = song.title,
                                 artist = song.artist,
@@ -639,6 +800,10 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                         }
                     }
                 }
+
+                } //cierra el Column interno de la rama
+            } //cierra el CompositionLocalProvider
+        } //cierra el AnimatedContent
 
         //La barrita se esconde al expandir: este AnimatedVisibility es el que
         AnimatedVisibility(
