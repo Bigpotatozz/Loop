@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.media3.common.util.UnstableApi
 import com.oscar.orbimusic.data.audio.FileScanner
 import com.oscar.orbimusic.data.local.database.FavoritesDao
+import com.oscar.orbimusic.data.local.database.PlayHistoryDao
 import com.oscar.orbimusic.data.local.database.PlaylistDao
 import com.oscar.orbimusic.data.local.database.SongDao
 import com.oscar.orbimusic.data.local.database.SongDatabase
@@ -35,6 +36,9 @@ object AppModule {
     };
     private val playlistDao: PlaylistDao by lazy {
         songDatabaseInit.playlistDao();
+    };
+    private val playHistoryDao: PlayHistoryDao by lazy {
+        songDatabaseInit.playHistoryDao();
     };
     private val songRepository: SongRepository by lazy {
         SongRepositoryImpl(songDao, favoritesDao, playlistDao);
