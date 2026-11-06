@@ -83,8 +83,17 @@ class SongRepositoryImpl(
     override fun getPlaylistSummaries(): Flow<List<PlaylistSummary>> {
         return combine(
             favoritesDao.getFavoriteIds(),
-            playlistDao.getAllPlaylistsWithCount()
-        ) { favoriteIds, playlists ->
+            playlistDao.getAllPlaylistsWithCount(),
+            playlistDao.playlistCoverPaths(),
+            favoritesDao.favoriteCoverPaths()
+        ) { favoriteIds, playlists, coverRows, favoriteCovers ->
+
+            val coversByPlaylist = coverRows
+                .groupBy(
+                    keySelector = { it.idPlaylist },
+                    valueTransform = { it.albumArtPath }
+                )
+                .mapValues { (_, paths) -> paths.take(4) }
 
             buildList {
                 //Favoritos va primero y siempre aparece, aunque este vacio
@@ -92,7 +101,8 @@ class SongRepositoryImpl(
                     PlaylistSummary(
                         id = null,
                         name = "Favoritos",
-                        songCount = favoriteIds.size
+                        songCount = favoriteIds.size,
+                        coverPaths = favoriteCovers
                     )
                 )
 
@@ -101,7 +111,10 @@ class SongRepositoryImpl(
                         PlaylistSummary(
                             id = row.playlist.idPlaylist,
                             name = row.playlist.nombre,
-                            songCount = row.songCount
+                            songCount = row.songCount,
+                            //orEmpty: una playlist vacia, o con canciones sin
+                            //caratula, no aparece en el resultado del JOIN
+                            coverPaths = coversByPlaylist[row.playlist.idPlaylist].orEmpty()
                         )
                     )
                 }

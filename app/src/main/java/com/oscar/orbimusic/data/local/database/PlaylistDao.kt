@@ -17,9 +17,26 @@ data class PlaylistWithCount(
 )
 
 
+data class PlaylistCoverRow(
+    val idPlaylist: Long,
+    val albumArtPath: String
+)
+
+
 //INTERFACE DONDE SE EJECUTAN LAS ACCIONES SOBRE PLAYLISTS Y SU DETALLE
 @Dao
 interface PlaylistDao {
+
+    @Query("""
+        SELECT playlistDetalle.idPlaylist AS idPlaylist,
+               songs.albumArtPath AS albumArtPath
+        FROM playlistDetalle
+        INNER JOIN songs ON songs.id = playlistDetalle.songId
+        WHERE songs.albumArtPath IS NOT NULL
+          AND playlistDetalle.position < 12
+        ORDER BY playlistDetalle.idPlaylist, playlistDetalle.position
+    """)
+    fun playlistCoverPaths(): Flow<List<PlaylistCoverRow>>
 
 
     @Query("SELECT idPlaylist FROM playlistDetalle WHERE songId = :songId")

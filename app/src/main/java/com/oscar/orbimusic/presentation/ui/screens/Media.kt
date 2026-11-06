@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -56,6 +57,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -63,6 +66,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.text.style.TextOverflow
+import coil.compose.AsyncImage
 import com.oscar.orbimusic.domain.model.PlaylistSelection
 import com.oscar.orbimusic.domain.model.PlaylistSummary
 import com.oscar.orbimusic.presentation.ui.animations.LocalPlayerAnimatedScope
@@ -273,8 +277,68 @@ private fun CreatePlaylistDialog(
     }
 }
 
+//La portada de una playlist: un mosaico con sus primeras cuatro caratulas.
+//
+//Con menos de cuatro se usa una sola imagen a sangre completa. Un 2x2 con
+//huecos se ve roto; una imagen sola se ve intencional.
+@Composable
+private fun PlaylistCoverMosaic(
+    coverPaths: List<String>,
+    fallbackIcon: ImageVector,
+    fallbackTint: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier.background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            //Playlist vacia, o con canciones sin portada
+            coverPaths.isEmpty() -> {
+                Icon(
+                    imageVector = fallbackIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp),
+                    tint = fallbackTint
+                )
+            }
+
+            coverPaths.size < 4 -> {
+                AsyncImage(
+                    model = coverPaths.first(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            else -> {
+                //Rejilla 2x2 sin separacion: cada celda es un cuarto del cuadro
+                Column(Modifier.fillMaxSize()) {
+                    for (fila in 0 until 2) {
+                        Row(Modifier.weight(1f)) {
+                            for (columna in 0 until 2) {
+                                AsyncImage(
+                                    model = coverPaths[fila * 2 + columna],
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 //Fila del primer nivel: una playlist como destino, no como encabezado de un
-//bloque de canciones. Favoritos se distingue con su corazon rojo.
+//bloque de canciones. Las medidas son las de MediaSongCard a proposito, para
+//que al cambiar de filtro las filas no brinquen de tamaño.
 @Composable
 private fun PlaylistSummaryRow(
     summary: PlaylistSummary,
@@ -285,28 +349,23 @@ private fun PlaylistSummaryRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 60.dp)
+            .heightIn(min = 72.dp)
             .clip(RoundedCornerShape(10.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            Modifier
-                .size(40.dp)
+        PlaylistCoverMosaic(
+            coverPaths = summary.coverPaths,
+            //Favoritos se distingue con su corazon rojo cuando no hay portadas
+            fallbackIcon = if (isFavorites) Icons.Rounded.Favorite
+            else Icons.Rounded.QueueMusic,
+            fallbackTint = if (isFavorites) FavoriteRed
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .size(56.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = if (isFavorites) Icons.Rounded.Favorite
-                else Icons.Rounded.QueueMusic,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = if (isFavorites) FavoriteRed
-                else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        )
 
         Spacer(Modifier.width(12.dp))
 
