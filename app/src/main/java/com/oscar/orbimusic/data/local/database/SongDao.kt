@@ -40,6 +40,10 @@ interface SongDao {
     @Query("SELECT * FROM songs ORDER BY RANDOM() LIMIT 1")
     suspend fun getRandomSong(): SongEntity?
 
+    //Borra una cancion
+    @Query("DELETE FROM songs WHERE id = :id")
+    suspend fun deleteSongById(id: Long)
+
 
 
 }

@@ -407,6 +407,79 @@ private fun DeletePlaylistDialog(
 }
 
 
+@Composable
+private fun DeleteSongDialog(
+    title: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.primary
+        ) {
+            Column(Modifier.padding(24.dp)) {
+
+                Text(
+                    text = "¿Eliminar \"$title\"?",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.5).sp
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+                Text(
+                    text = "El archivo se borra del dispositivo y la canción sale de tus favoritos y de todas tus playlists. No se puede recuperar.",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Cancelar",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(100))
+                            .clickable(onClick = onDismiss)
+                            .padding(horizontal = 16.dp, vertical = 9.dp)
+                    )
+
+                    Spacer(Modifier.width(8.dp))
+
+                    Text(
+                        text = "Eliminar",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color.White,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(100))
+                            .background(FavoriteRed)
+                            .clickable(onClick = onConfirm)
+                            .padding(horizontal = 20.dp, vertical = 9.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+
 //Envuelve una fila para poder quitarla deslizando hacia la izquierda
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -746,6 +819,20 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
     //Cual playlist se esta por borrar. Null = ningun dialogo abierto.
     var playlistToDelete by remember { mutableStateOf<PlaylistSummary?>(null) }
 
+    //Lo mismo para la cancion, pero aqui el borrado se lleva el archivo
+    var songToDelete by remember { mutableStateOf<Song?>(null) }
+
+    songToDelete?.let { target ->
+        DeleteSongDialog(
+            title = target.title,
+            onDismiss = { songToDelete = null },
+            onConfirm = {
+                mediaViewModel.deleteSong(target)
+                songToDelete = null
+            }
+        )
+    }
+
     playlistToDelete?.let { target ->
         DeletePlaylistDialog(
             name = target.name,
@@ -984,18 +1071,31 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
                     } else {
                         itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
-                            MediaSongCard(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .clickable(onClick = { mediaViewModel.playSong(song, index) }),
-                                title = song.title,
-                                artist = song.artist,
-                                albumArt = song.albumArtPath,
-                                duration = song.duration,
-                                isPlaying = playerState.currentSong?.path == song.path && playerState.isPlaying,
-                                isFavorite = song.id in favoriteIds,
-                                onToggleFavorite = { mediaViewModel.toggleFavorite(song.id) }
-                            )
+                            //Aqui deslizar borra el archivo, a diferencia del
+                            //detalle de playlist donde solo la saca de la lista
+                            SwipeToRemove(
+                                label = "Eliminar",
+                                //La fila regresa; el archivo se borra solo si
+                                //se confirma en el dialogo
+                                dismissOnSwipe = false,
+                                onRemove = { songToDelete = song }
+                            ) {
+                                MediaSongCard(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        //Opaca para que al deslizar no se vea
+                                        //el rojo a traves de la tarjeta
+                                        .background(MaterialTheme.colorScheme.primary)
+                                        .clickable(onClick = { mediaViewModel.playSong(song, index) }),
+                                    title = song.title,
+                                    artist = song.artist,
+                                    albumArt = song.albumArtPath,
+                                    duration = song.duration,
+                                    isPlaying = playerState.currentSong?.path == song.path && playerState.isPlaying,
+                                    isFavorite = song.id in favoriteIds,
+                                    onToggleFavorite = { mediaViewModel.toggleFavorite(song.id) }
+                                )
+                            }
                         }
                     }
                 }

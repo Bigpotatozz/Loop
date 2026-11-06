@@ -279,6 +279,17 @@ class MediaViewModel (private val songRepository: SongRepository,
     }
 
 
+    //Borra la cancion del dispositivo.
+    fun deleteSong(song: Song) {
+        viewModelScope.launch {
+            if (_playerState.value.currentSong?.path == song.path) {
+                pauseSong()
+            }
+            songRepository.deleteSong(song)
+        }
+    }
+
+
     fun playSong(song: Song?, index: Int = 0) {
         _playerState.update { currentState ->
             currentState.copy(

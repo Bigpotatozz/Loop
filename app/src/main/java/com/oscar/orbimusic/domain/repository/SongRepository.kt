@@ -11,6 +11,8 @@ interface SongRepository {
     fun getOrderedByArtist(): Flow<List<Song>>;
     fun getOrderedByName(): Flow<List<Song>>;
 
+    suspend fun deleteSong(song: Song): Boolean;
+
 
     // ----- Favoritos -----
 

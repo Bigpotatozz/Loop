@@ -11,9 +11,12 @@ import com.oscar.orbimusic.domain.model.Playlist
 import com.oscar.orbimusic.domain.model.PlaylistSummary
 import com.oscar.orbimusic.domain.model.Song
 import com.oscar.orbimusic.domain.repository.SongRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import java.io.File
 
 class SongRepositoryImpl(
     private val songDao: SongDao,
@@ -41,6 +44,24 @@ class SongRepositoryImpl(
         return songDao.getOrderedByArtist().map { entities ->
             entities.map { it.toDomainModel() }
         }
+    }
+
+
+    override suspend fun deleteSong(song: Song): Boolean = withContext(Dispatchers.IO) {
+        val audioFile = File(song.path)
+
+        if (audioFile.exists() && !audioFile.delete()) {
+            return@withContext false
+        }
+
+        song.albumArtPath?.let { path ->
+            val artFile = File(path)
+            if (artFile.exists()) artFile.delete()
+        }
+
+        //El CASCADE de favorites y playlistDetalle hace el resto
+        songDao.deleteSongById(song.id)
+        true
     }
 
 
