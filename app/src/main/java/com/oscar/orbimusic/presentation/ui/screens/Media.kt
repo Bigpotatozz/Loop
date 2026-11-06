@@ -11,6 +11,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -59,8 +60,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -401,43 +404,61 @@ private fun PlaylistDetailHeader(
 ) {
     val isFavorites = summary.id == null
     val hasSongs = songs.isNotEmpty()
+    //El degradado tiene que fundir con el fondo real de la pantalla, que es
+    //primary: en este tema primary es el color de fondo, no un acento
+    val background = MaterialTheme.colorScheme.primary
 
     Column(Modifier.fillMaxWidth()) {
 
-        Box(
-            Modifier
-                .padding(start = 2.dp, top = 8.dp)
-                .size(44.dp)
-                .clip(RoundedCornerShape(100))
-                .clickable(onClick = onBack),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = "Regresar a las playlists",
-                tint = MaterialTheme.colorScheme.secondary
+        Box(Modifier.fillMaxWidth()) {
+
+            //aspectRatio(1f) y no una altura fija: ocupa todo el ancho
+            //disponible y se mantiene cuadrada en cualquier pantalla, que es
+            //lo que el mosaico 2x2 necesita para no descuadrarse.
+            //La clave compartida es la misma que la fila del primer nivel.
+            PlaylistCoverMosaic(
+                coverPaths = summary.coverPaths,
+                fallbackIcon = if (isFavorites) Icons.Rounded.Favorite
+                else Icons.Rounded.QueueMusic,
+                fallbackTint = if (isFavorites) FavoriteRed
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .sharedPlaylistElement(playlistCoverKey(summary.id))
+                    //Solo el degradado inferior: funde el borde con el fondo en
+                    //vez de cortarlo en seco
+                    .drawWithContent {
+                        drawContent()
+
+                        drawRect(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, background),
+                                startY = size.height * 0.55f,
+                                endY = size.height
+                            )
+                        )
+                    }
             )
+
+            //Flotando sobre la imagen, como el chevron del expandido
+            Box(
+                Modifier
+                    .padding(start = 6.dp, top = 6.dp)
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(100))
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = "Regresar a las playlists",
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
         }
 
-        Spacer(Modifier.height(4.dp))
-
-        //La misma clave que la fila del primer nivel: eso es lo que hace que
-        //la caratula viaje en vez de aparecer de golpe
-        PlaylistCoverMosaic(
-            coverPaths = summary.coverPaths,
-            fallbackIcon = if (isFavorites) Icons.Rounded.Favorite
-            else Icons.Rounded.QueueMusic,
-            fallbackTint = if (isFavorites) FavoriteRed
-            else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .size(180.dp)
-                .sharedPlaylistElement(playlistCoverKey(summary.id))
-                .clip(RoundedCornerShape(16.dp))
-        )
-
-        Spacer(Modifier.height(20.dp))
-
+        //Sin Spacer: el degradado ya dejo aire visual al fundir la imagen
         Column(Modifier.padding(horizontal = 12.dp)) {
             Text(
                 text = summary.name,
@@ -710,7 +731,13 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                     //El izado conserva el scroll del primer nivel al ir y venir;
                     //el del detalle es propio y arranca desde arriba
                     state = listState,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    //En el detalle no hay margen lateral: la caratula tiene que
+                    //llegar a las orillas. Las canciones se lo ponen ellas.
+                    contentPadding = if (openSummary == null) {
+                        PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                    } else {
+                        PaddingValues(bottom = 4.dp)
+                    },
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     //SEGUNDO NIVEL: las canciones de la playlist abierta
@@ -740,7 +767,7 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                                     text = "Todavía no hay canciones aquí. Agrégalas desde el reproductor.",
                                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 6.dp)
                                 )
                             }
                         }
@@ -748,6 +775,9 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                         itemsIndexed(branchSongs, key = { _, song -> song.id }) { index, song ->
                             MediaSongCard(
                                 modifier = Modifier
+                                    //El margen lateral lo pone cada cancion
+                                    //porque la lista ya no lo tiene
+                                    .padding(horizontal = 12.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     //playSongs y no playSong: la cola es la
                                     //playlist, no la biblioteca completa
