@@ -159,6 +159,12 @@ class DownloadMusicService: Service() {
                 return@withContext emptyList()
             }
 
+            //TEMPORAL: imprime el primer resultado crudo para ver que campos
+            //manda de verdad la API. Quitar cuando ya no haga falta.
+            result.out.lineSequence()
+                .firstOrNull { it.trimStart().startsWith("{") }
+                ?.let { Log.d("DownloadService", "JSON CRUDO >>> $it") }
+
             //--dump-json imprime un JSON por linea, no un array. Se filtran las
             //lineas que no son JSON porque yt-dlp a veces escribe avisos en stdout.
             val results = result.out
