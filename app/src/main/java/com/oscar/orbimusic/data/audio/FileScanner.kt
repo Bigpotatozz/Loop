@@ -64,6 +64,15 @@ class FileScanner(
     }
 
 
+    private fun primaryArtist(raw: String?): String {
+        return raw
+            ?.substringBefore(',')
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?: "Desconocido"
+    }
+
+
     //Extrae la metadata del archivo
     private fun extractMetaData(file: File): SongEntity?{
 
@@ -77,8 +86,9 @@ class FileScanner(
             //Extrae los datos
             val title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
                 ?: file.nameWithoutExtension
-            val artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
-                ?: "Desconocido"
+            val artist = primaryArtist(
+                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+            )
             val album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)
                 ?: "Desconocido"
             val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)

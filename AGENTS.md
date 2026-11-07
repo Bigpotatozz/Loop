@@ -157,9 +157,38 @@ Riesgo conocido: en YouTube ese campo suele traer el nombre del canal
 (`Bad Bunny - Topic`), el de un sello, o nada. Si está sucio, las
 estadísticas agrupan mal y la función queda rara sin que se entienda por qué.
 
-**Comprobado el 2026-10-31: el usuario revisó su biblioteca y los nombres de
-artista salen limpios.** La idea es viable por ese lado, pero conviene
-revisarlo otra vez si la biblioteca crece mucho.
+~~Comprobado el 2026-10-31: el usuario revisó su biblioteca y los nombres de
+artista salen limpios.~~
+
+**Desmentido el 2026-11-07.** La revisión de octubre fue superficial. El usuario
+encontró que la **misma** canción de un artista llega con los créditos escritos
+distinto según la subida:
+
+```
+"Bad Bunny, Benito Martinez"
+"Bad Bunny, BENITO MARTINEZ OCACION"
+```
+
+El origen es el Content ID de YouTube: cada subida puede traer los créditos con
+el nombre artístico, el legal, featurings o variaciones del sello, y
+`--embed-metadata` escribe lo que venga sin normalizar.
+
+Para un `GROUP BY songs.artist` eso son **dos artistas distintos**, así que el
+top se parte en pedazos sin que se entienda por qué.
+
+**Mitigación aplicada (2026-11-07):** `FileScanner.primaryArtist()` se queda con
+lo que va **antes de la primera coma**, al escribir y no al consultar, para que
+el nombre limpio sirva igual para agrupar, mostrar y ordenar.
+
+- Limitación aceptada: parte nombres de grupo con coma, tipo
+  `Earth, Wind & Fire` → `Earth`. Separar también por `&` o `;` rompería más
+  casos de los que arregla.
+- **No cubre** que el artista principal venga escrito distinto de origen
+  (`Bad Bunny` vs `BAD BUNNY`). Para eso basta agrupar con `COLLATE NOCASE` en
+  las consultas de estadísticas cuando se escriban.
+- **No arregla las filas ya escaneadas:** `FileScanner` solo inserta cuando
+  `searchByPath` devuelve null. Las existentes conservan el valor sucio hasta
+  que se borre la base o se reescanee desde cero.
 
 ### Tablas: lo que ya existe
 

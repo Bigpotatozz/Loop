@@ -33,6 +33,7 @@ import android.graphics.BitmapFactory
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.net.URLEncoder
 import kotlin.math.log
 
 
@@ -64,7 +65,7 @@ class DownloadMusicService: Service() {
         private const val CHANNEL_ID = "music_download_channel"
         // ID de la notificación
         private const val NOTIFICATION_ID = 2
-        //Cuantos resultados se le piden a YouTube por busqueda
+        //Cuantos resultados se le piden a YouTube Music por busqueda
         private const val SEARCH_RESULTS = 20
     }
 
@@ -136,13 +137,19 @@ class DownloadMusicService: Service() {
             if (!isInitialized.await()) {
                 throw Exception("YouTubeDL failed to initialize")
             }
+    
+            val encoded = URLEncoder.encode(query, "UTF-8")
 
-            val request = YoutubeDLRequest("ytsearch$SEARCH_RESULTS:$query").apply {
+            val request = YoutubeDLRequest(
+                "https://music.youtube.com/search?q=$encoded#songs"
+            ).apply {
                 //--flat-playlist evita que yt-dlp extraiga cada video uno por uno.
                 //Sin esto serian 20 extracciones completas y la busqueda tardaria muchisimo.
                 addOption("--flat-playlist")
                 addOption("--dump-json")
                 addOption("--no-warnings")
+                //La URL no lleva el limite dentro como lo llevaba ytsearch20:
+                addOption("--playlist-end", SEARCH_RESULTS.toString())
             }
 
             val result = YoutubeDL.getInstance().execute(request)
@@ -159,8 +166,7 @@ class DownloadMusicService: Service() {
                 .map { it.trim() }
                 .filter { it.startsWith("{") }
                 .mapNotNull { parseSearchResult(it) }
-                //El id se usa como key del LazyColumn y Compose truena si se
-                //repite, asi que se garantiza aqui que sea unico
+
                 .distinctBy { it.id }
                 .toList()
 
@@ -184,12 +190,20 @@ class DownloadMusicService: Service() {
             YtSearchResult(
                 id = id,
                 title = json.optString("title").ifBlank { "Sin titulo" },
+                //YouTube Music no manda ninguno de estos dos: yt-dlp solo saca
+                //videoId y titulo de sus resultados.
                 channel = json.optString("channel")
                     .ifBlank { json.optString("uploader") }
                     .ifBlank { "Desconocido" },
                 durationSeconds = json.optDouble("duration", 0.0)
                     .takeIf { !it.isNaN() }?.toLong() ?: 0L,
-                thumbnailUrl = "https://i.ytimg.com/vi/$id/hqdefault.jpg",
+                //mqdefault y no hqdefault: hqdefault es 480x360, o sea 4:3, y
+                //mete el fotograma 16:9 con barras negras arriba y abajo. Al
+                //recortarlo a cuadrado las barras se quedan dentro y parecen un
+                //borde. mqdefault es 320x180, 16:9 de verdad y sin relleno.
+                //Las dos existen siempre para cualquier video, a diferencia de
+                //maxresdefault, que falla en muchos.
+                thumbnailUrl = "https://i.ytimg.com/vi/$id/mqdefault.jpg",
                 url = json.optString("webpage_url")
                     .ifBlank { json.optString("url") }
                     .takeIf { it.startsWith("http") }

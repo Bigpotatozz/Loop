@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.oscar.orbimusic.data.models.YtSearchResult
 import com.oscar.orbimusic.presentation.ui.theme.OrbiMusicTheme
-import com.oscar.orbimusic.presentation.utils.parseTime
 
 //En que punto de la descarga esta esta fila
 sealed interface DownloadRowState {
@@ -63,7 +62,9 @@ fun SearchResultCard(
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        //La miniatura de YouTube es 16:9; Crop sobre un cuadrado le recorta los lados
+        //La miniatura llega en 16:9 (mqdefault). Crop la recorta por los lados
+        //para llenar el cuadrado sin deformarla ni dejar huecos: en las
+        //canciones del catalogo el centro es justo la portada.
         AsyncImage(
             model = result.thumbnailUrl,
             contentDescription = result.title,
@@ -83,18 +84,9 @@ fun SearchResultCard(
                     fontWeight = FontWeight.Medium,
                     letterSpacing = (-0.2).sp
                 ),
-                //Dos lineas, a diferencia de MediaSongCard: los titulos de YouTube
-                //son largos y normalmente traen el artista dentro del propio titulo
+                //Dos lineas: los titulos del catalogo pueden ser largos y aqui
+                //no hay subtitulo que les quite espacio
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                //parseTime espera milisegundos y el resultado viene en segundos
-                text = "${result.channel} · ${parseTime(result.durationSeconds * 1000)}",
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
