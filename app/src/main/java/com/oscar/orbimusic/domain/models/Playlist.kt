@@ -1,4 +1,4 @@
-package com.oscar.orbimusic.domain.model
+package com.oscar.orbimusic.domain.models
 
 //Modelo de dominio. Los nombres van en ingles para ir parejo con Song; el
 //mapeo contra nombre/descripcion de PlaylistEntity vive en el repositorio,

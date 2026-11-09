@@ -7,10 +7,10 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.media3.common.util.UnstableApi
 import com.oscar.orbimusic.data.audio.FileScanner
-import com.oscar.orbimusic.data.local.database.FavoritesDao
-import com.oscar.orbimusic.data.local.database.PlayHistoryDao
-import com.oscar.orbimusic.data.local.database.PlaylistDao
-import com.oscar.orbimusic.data.local.database.SongDao
+import com.oscar.orbimusic.data.local.database.dao.FavoritesDao
+import com.oscar.orbimusic.data.local.database.dao.PlayHistoryDao
+import com.oscar.orbimusic.data.local.database.dao.PlaylistDao
+import com.oscar.orbimusic.data.local.database.dao.SongDao
 import com.oscar.orbimusic.data.local.database.SongDatabase
 import com.oscar.orbimusic.data.repository.SongRepositoryImpl
 import com.oscar.orbimusic.domain.repository.SongRepository

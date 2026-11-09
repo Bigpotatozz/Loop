@@ -1,4 +1,4 @@
-package com.oscar.orbimusic.data.local.database
+package com.oscar.orbimusic.data.local.database.entities
 
 import androidx.room.Entity
 import androidx.room.ForeignKey

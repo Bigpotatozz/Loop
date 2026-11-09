@@ -79,10 +79,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
-import com.oscar.orbimusic.data.local.database.PlaySource
-import com.oscar.orbimusic.domain.model.PlaylistSelection
-import com.oscar.orbimusic.domain.model.PlaylistSummary
-import com.oscar.orbimusic.domain.model.Song
+import com.oscar.orbimusic.data.local.database.entities.PlaySource
+import com.oscar.orbimusic.domain.models.PlaylistSelection
+import com.oscar.orbimusic.domain.models.PlaylistSummary
+import com.oscar.orbimusic.domain.models.Song
 import com.oscar.orbimusic.presentation.ui.animations.LocalPlayerAnimatedScope
 import com.oscar.orbimusic.presentation.ui.animations.LocalPlaylistAnimatedScope
 import com.oscar.orbimusic.presentation.ui.animations.playlistCoverKey

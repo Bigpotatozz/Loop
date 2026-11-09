@@ -397,6 +397,60 @@ dos definiciones separadas que pueden volver a divergir. Se propuso un
 
 ---
 
+## Idea: Home con tendencias y artistas seguidos (sin diseñar)
+
+**Estado:** idea acordada, sin diseño ni código. Anotar para retomar.
+
+### Fuente de datos: Deezer API
+
+API pública, sin API key, sin login de usuario.
+
+Endpoints relevantes:
+- `/chart/0/tracks` y `/chart/0/artists` — tendencias globales
+- `/artist/{id}` — foto (4 tamaños), nombre, nb_fan, nb_album
+- `/artist/{id}/top` — top tracks con preview MP3 de 30s y carátula
+- `/artist/{id}/albums` — discografía con fecha de lanzamiento
+- `/artist/{id}/related` — artistas similares
+- `/search/artist?q=nombre` — para encontrar el deezerId desde un nombre
+
+### Estructura del Home
+
+Dos bloques naturales:
+
+**"Tendencias"** — `/chart/0/artists` al abrir la app. Sin estado local,
+siempre fresco.
+
+**"Tus artistas"** — recorre `followed_artists`, hace `/artist/{deezerId}/top`
+por cada uno y muestra sus canciones más escuchadas. Tocar una →
+pre-carga la búsqueda en yt-dlp y descarga.
+
+### Tabla `followed_artists` (decidida, sin implementar)
+
+```
+followed_artists
+├─ id          Long    PK autogenerado
+├─ deezerId    Long    ID del artista en Deezer
+├─ name        String
+├─ pictureUrl  String  foto xl
+├─ nbFan       Long    para mostrar badge de fans
+└─ followedAt  Long    epoch ms
+```
+
+### Pendiente de decidir
+
+- **¿Cómo sigue el usuario a un artista?**
+  - Opción A: desde el Home, botón "Seguir" en la tarjeta del artista
+  - Opción B: desde la biblioteca local, detectar artistas de tus canciones
+  - Opción C: ambas
+
+### Conexión con `play_history` (futuro)
+
+Cuando exista el historial, cruzar `play_history` con `followed_artists`:
+los artistas que más escuchas pero que aún no sigues aparecen como
+sugerencia "¿quieres seguir a X?".
+
+---
+
 ## Evaluación: adaptar la app a horizontal (sin hacer)
 
 Preguntado por el usuario: cuánto costaría soportar orientación horizontal.

@@ -2,11 +2,9 @@ package com.oscar.orbimusic.data.audio
 
 import android.content.Context
 import android.media.MediaMetadataRetriever
-import android.os.Environment
 import android.util.Log
-import com.oscar.orbimusic.data.local.database.SongDao
-import com.oscar.orbimusic.data.local.database.SongEntity
-import kotlinx.coroutines.flow.Flow
+import com.oscar.orbimusic.data.local.database.dao.SongDao
+import com.oscar.orbimusic.data.local.database.entities.SongEntity
 import java.io.File
 import java.io.FileOutputStream
 

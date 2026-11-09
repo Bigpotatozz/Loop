@@ -4,6 +4,15 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.oscar.orbimusic.data.local.database.dao.FavoritesDao
+import com.oscar.orbimusic.data.local.database.dao.PlayHistoryDao
+import com.oscar.orbimusic.data.local.database.dao.PlaylistDao
+import com.oscar.orbimusic.data.local.database.dao.SongDao
+import com.oscar.orbimusic.data.local.database.entities.FavoritesEntity
+import com.oscar.orbimusic.data.local.database.entities.PlayHistoryEntity
+import com.oscar.orbimusic.data.local.database.entities.PlayListDetalle
+import com.oscar.orbimusic.data.local.database.entities.PlaylistEntity
+import com.oscar.orbimusic.data.local.database.entities.SongEntity
 
 
 @Database(

@@ -36,7 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.oscar.orbimusic.domain.model.PlayerState
+import com.oscar.orbimusic.domain.models.PlayerState
 import com.oscar.orbimusic.presentation.ui.animations.PlayerArtKey
 import com.oscar.orbimusic.presentation.ui.animations.PlayerContainerKey
 import com.oscar.orbimusic.presentation.ui.animations.PlayerTitleKey

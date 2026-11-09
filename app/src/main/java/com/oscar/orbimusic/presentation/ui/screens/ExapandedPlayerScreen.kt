@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
@@ -69,7 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import coil.compose.AsyncImage
-import com.oscar.orbimusic.domain.model.PlayerState
+import com.oscar.orbimusic.domain.models.PlayerState
 import com.oscar.orbimusic.presentation.ui.animations.PlayerArtKey
 import com.oscar.orbimusic.presentation.ui.animations.PlayerContainerKey
 import com.oscar.orbimusic.presentation.ui.animations.PlayerTitleKey

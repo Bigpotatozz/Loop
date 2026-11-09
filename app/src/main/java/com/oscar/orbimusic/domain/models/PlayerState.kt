@@ -1,4 +1,4 @@
-package com.oscar.orbimusic.domain.model
+package com.oscar.orbimusic.domain.models
 
 
 data class PlayerState(

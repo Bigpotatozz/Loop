@@ -7,8 +7,6 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.media.session.PlaybackState.ACTION_PAUSE
-import android.media.session.PlaybackState.ACTION_PLAY
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
@@ -16,7 +14,6 @@ import android.util.Log
 import androidx.annotation.OptIn
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
-import androidx.core.app.ServiceCompat
 import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -28,9 +25,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaStyleNotificationHelper
 import com.oscar.orbimusic.MainActivity
 import com.oscar.orbimusic.R
-import com.oscar.orbimusic.data.audio.AudioPlayerService.Companion.ACTION_NEXT
-import com.oscar.orbimusic.data.audio.AudioPlayerService.Companion.ACTION_PREVIOUS
-import com.oscar.orbimusic.domain.model.Song
+import com.oscar.orbimusic.domain.models.Song
 
 class AudioPlayerService: Service() {
 

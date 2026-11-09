@@ -1,4 +1,4 @@
-package com.oscar.orbimusic.domain.model
+package com.oscar.orbimusic.domain.models
 
 class Song(
     val id: Long = 0,

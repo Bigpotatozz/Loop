@@ -1,4 +1,4 @@
-package com.oscar.orbimusic.data.local.database
+package com.oscar.orbimusic.data.local.database.dao
 
 import androidx.room.Dao
 import androidx.room.Embedded
@@ -6,22 +6,12 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import com.oscar.orbimusic.data.local.database.entities.PlayListDetalle
+import com.oscar.orbimusic.data.local.database.entities.PlaylistEntity
+import com.oscar.orbimusic.data.local.database.entities.SongEntity
+import com.oscar.orbimusic.data.models.PlaylistCoverRow
+import com.oscar.orbimusic.data.models.PlaylistWithCount
 import kotlinx.coroutines.flow.Flow
-
-
-//Una playlist junto con cuantas canciones tiene. @Embedded le dice a Room que
-//las columnas de playlist se mapean a PlaylistEntity, y songCount aparte.
-data class PlaylistWithCount(
-    @Embedded val playlist: PlaylistEntity,
-    val songCount: Int
-)
-
-
-data class PlaylistCoverRow(
-    val idPlaylist: Long,
-    val albumArtPath: String
-)
-
 
 //INTERFACE DONDE SE EJECUTAN LAS ACCIONES SOBRE PLAYLISTS Y SU DETALLE
 @Dao

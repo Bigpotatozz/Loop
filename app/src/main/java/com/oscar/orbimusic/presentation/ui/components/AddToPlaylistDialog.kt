@@ -32,7 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.oscar.orbimusic.domain.model.PlaylistSummary
+import com.oscar.orbimusic.domain.models.PlaylistSummary
 
 //playlistIdsWithSong viene de una consulta que devuelve solo ids. Antes se
 //recibian las playlists con todas sus canciones y se buscaba dentro; eso
