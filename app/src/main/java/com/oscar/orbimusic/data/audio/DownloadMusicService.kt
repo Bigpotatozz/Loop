@@ -96,7 +96,6 @@ class DownloadMusicService: Service() {
             try{
                 YoutubeDL.getInstance().init(applicationContext)
                 FFmpeg.getInstance().init(applicationContext)
-                isInitialized.complete(true)
 
                 //Solo actualiza si han pasado mas de 24h desde la ultima vez,
                 //evita el delay en cada apertura de pantalla
@@ -104,12 +103,21 @@ class DownloadMusicService: Service() {
                 val lastUpdate = prefs.getLong("last_update", 0L)
                 val oneDayMs = 24 * 60 * 60 * 1000L
                 if (System.currentTimeMillis() - lastUpdate > oneDayMs) {
-                    YoutubeDL.getInstance().updateYoutubeDL(this@DownloadMusicService)
-                    prefs.edit().putLong("last_update", System.currentTimeMillis()).apply()
-                    Log.d("DownloadService", "YouTubeDL actualizado")
+                    try {
+                        YoutubeDL.getInstance().updateYoutubeDL(this@DownloadMusicService)
+                        prefs.edit().putLong("last_update", System.currentTimeMillis()).apply()
+                        Log.d("DownloadService", "YouTubeDL actualizado")
+                    } catch (e: Exception) {
+                        //Que falle la actualizacion no debe dejar la pantalla
+                        //muerta: el binario que ya estaba sigue sirviendo. No se
+                        //escribe el timestamp, asi se reintenta en la proxima apertura.
+                        Log.w("DownloadService", "No se pudo actualizar YouTubeDL, se sigue con el binario actual", e)
+                    }
                 } else {
                     Log.d("DownloadService", "YouTubeDL al dia, se omite actualizacion")
                 }
+
+                isInitialized.complete(true)
             }catch (e: YoutubeDLException){
                 Log.e("DownloadService", "$e", e)
                 if (!isInitialized.isCompleted) isInitialized.complete(false)
@@ -335,9 +343,34 @@ class DownloadMusicService: Service() {
                 DownloadProgress(
                     videoId = videoId,
                     isCompleted = false,
-                    error = e.message ?: "Unknown error"
+                    error = friendlyError(e.message)
                 )
             )
+        }
+    }
+
+
+    private fun friendlyError(raw: String?): String {
+        val message = raw?.trim().orEmpty()
+        return when {
+            message.isBlank() -> "No se pudo descargar"
+            message.contains("confirm your age", ignoreCase = true) ->
+                "YouTube pide iniciar sesion para este video"
+            message.contains("not a bot", ignoreCase = true) ->
+                "YouTube pide verificacion, intentalo en un momento"
+            message.contains("Private video", ignoreCase = true) ->
+                "El video es privado"
+            message.contains("Video unavailable", ignoreCase = true) ->
+                "Video no disponible"
+            message.contains("Unable to download", ignoreCase = true) ||
+            message.contains("Unable to connect", ignoreCase = true) ->
+                "Sin conexion con YouTube"
+            else -> message.lineSequence()
+                .map { it.trim() }
+                .firstOrNull { it.isNotBlank() }
+                ?.removePrefix("ERROR: ")
+                ?.take(140)
+                ?: "No se pudo descargar"
         }
     }
 

@@ -79,6 +79,7 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
     val downloadingId by downloadViewModel.downloadingId.collectAsState()
     val downloadProgress by downloadViewModel.downloadProgress.collectAsState()
     val completedDownloads by downloadViewModel.completedDownloads.collectAsState()
+    val downloadError by downloadViewModel.downloadError.collectAsState()
 
     //Para esconder el teclado al lanzar la busqueda y dejar ver los resultados
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -89,6 +90,15 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
     
     DisposableEffect(Unit) {
         onDispose { downloadViewModel.clearSearch() }
+    }
+
+    //Antes el error se escribia en el StateFlow y nadie lo leia: una descarga
+    //fallida solo apagaba el spinner y el motivo se quedaba en el logcat.
+    LaunchedEffect(downloadError) {
+        downloadError?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            downloadViewModel.clearDownloadError()
+        }
     }
 
     val widgetsList = listOf(

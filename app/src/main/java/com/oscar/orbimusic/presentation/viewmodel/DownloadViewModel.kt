@@ -134,6 +134,12 @@ class DownloadViewModel(private val context: Context): ViewModel() {
         }
     }
 
+    //La pantalla lo llama despues de enseñar el error. Sin esto el StateFlow se
+    //queda con el ultimo mensaje y el Snackbar vuelve a salir en cada recomposicion.
+    fun clearDownloadError(){
+        _downloadError.value = null;
+    }
+
     //Limpia los resultados para que la pantalla vuelva a mostrar los widgets
     fun clearSearch(){
         searchJob?.cancel();
