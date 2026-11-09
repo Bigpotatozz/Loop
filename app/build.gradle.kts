@@ -86,4 +86,8 @@ dependencies {
     implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
     implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
 
+    //Retrofit
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+
 }

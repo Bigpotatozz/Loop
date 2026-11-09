@@ -399,7 +399,12 @@ dos definiciones separadas que pueden volver a divergir. Se propuso un
 
 ## Idea: Home con tendencias y artistas seguidos (sin diseñar)
 
-**Estado:** idea acordada, sin diseño ni código. Anotar para retomar.
+**Estado:** idea acordada, sin diseño ni código.
+
+**Decidido el 2026-11-09:** el Home es **tendencias y perfiles de artista**. El
+resumen de `play_history` (minutos escuchados, top canciones, top artistas) **no
+va aquí**: se habia planteado como un boceto en Home y quedo descartado. Va en
+una seccion propia, todavia por definir.
 
 ### Fuente de datos: Deezer API
 

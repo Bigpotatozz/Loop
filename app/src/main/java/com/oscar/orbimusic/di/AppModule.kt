@@ -12,10 +12,15 @@ import com.oscar.orbimusic.data.local.database.dao.PlayHistoryDao
 import com.oscar.orbimusic.data.local.database.dao.PlaylistDao
 import com.oscar.orbimusic.data.local.database.dao.SongDao
 import com.oscar.orbimusic.data.local.database.SongDatabase
+import com.oscar.orbimusic.data.network.DeezerClient
+import com.oscar.orbimusic.data.repository.DeezerRepositoryImpl
 import com.oscar.orbimusic.data.repository.SongRepositoryImpl
+import com.oscar.orbimusic.domain.repository.DeezerRepository
 import com.oscar.orbimusic.domain.repository.SongRepository
 import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 object AppModule {
 
@@ -59,6 +64,17 @@ object AppModule {
         initializer { DownloadViewModel(context) }
     }
 
+    private val deezerApi: DeezerClient by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://api.deezer.com/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(DeezerClient::class.java)
+    }
+
+    private val deezerRepository: DeezerRepository by lazy {
+        DeezerRepositoryImpl(deezerApi);
+    };
 
 
 }
