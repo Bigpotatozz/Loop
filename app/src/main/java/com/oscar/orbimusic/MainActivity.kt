@@ -62,6 +62,7 @@ import androidx.media3.common.util.UnstableApi
 import com.oscar.orbimusic.di.AppModule
 import com.oscar.orbimusic.presentation.ui.screens.DownloadScreen
 import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
+import com.oscar.orbimusic.presentation.viewmodel.HomeViewModel
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
 import kotlinx.coroutines.launch
 
@@ -93,6 +94,8 @@ class MainActivity : ComponentActivity() {
             ViewModelProvider(this, AppModule.mediaViewModelFactory)[MediaViewModel::class.java]
         val downloadViewModel: DownloadViewModel =
             ViewModelProvider(this, AppModule.downloadViewModelFactory)[DownloadViewModel::class.java]
+
+        val homeViewModel: HomeViewModel = ViewModelProvider(this, AppModule.homeViewModelFactory)[HomeViewModel::class.java]
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             requestPermissions.launch(arrayOf(
@@ -161,7 +164,8 @@ class MainActivity : ComponentActivity() {
                                         AppNavigation(Modifier,
                                             hostController = navController,
                                             mediaViewModel,
-                                            downloadViewModel)
+                                            downloadViewModel,
+                                            homeViewModel)
                                     }
 
                                 }
@@ -199,12 +203,12 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(UnstableApi::class)
 @Composable
-fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaViewModel: MediaViewModel, downloadViewModel: DownloadViewModel){
+fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaViewModel: MediaViewModel, downloadViewModel: DownloadViewModel, homeViewModel: HomeViewModel){
 
     NavHost(hostController, "home", modifier){
 
         composable("home"){
-            HomeScreen()
+            HomeScreen(homeViewModel)
         }
 
         composable("media"){

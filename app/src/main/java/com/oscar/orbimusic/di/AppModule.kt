@@ -18,6 +18,7 @@ import com.oscar.orbimusic.data.repository.SongRepositoryImpl
 import com.oscar.orbimusic.domain.repository.DeezerRepository
 import com.oscar.orbimusic.domain.repository.SongRepository
 import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
+import com.oscar.orbimusic.presentation.viewmodel.HomeViewModel
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -62,6 +63,11 @@ object AppModule {
     @OptIn(UnstableApi::class)
     val downloadViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
         initializer { DownloadViewModel(context) }
+    }
+
+    //No recibe context: Retrofit no lo necesita, a diferencia de los otros dos
+    val homeViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
+        initializer { HomeViewModel(deezerRepository) }
     }
 
     private val deezerApi: DeezerClient by lazy {
