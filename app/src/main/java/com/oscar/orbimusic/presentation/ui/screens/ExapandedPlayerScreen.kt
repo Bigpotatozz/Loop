@@ -424,7 +424,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .clickable(enabled = nextSong != null) { mediaViewModel.playNextNoShuffle() }
+                .clickable(enabled = nextSong != null) { mediaViewModel.playNext() }
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {

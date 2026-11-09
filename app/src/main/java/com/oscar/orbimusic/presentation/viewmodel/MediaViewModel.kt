@@ -1,12 +1,18 @@
 package com.oscar.orbimusic.presentation.viewmodel
 
+import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.Player
+import androidx.media3.common.MediaItem
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import com.oscar.orbimusic.data.audio.AudioPlayerService
-import com.oscar.orbimusic.data.audio.AudioServiceConnection
+import com.oscar.orbimusic.data.audio.toMediaItem
 import com.oscar.orbimusic.data.local.database.entities.PlaySource
 import com.oscar.orbimusic.domain.models.PlayerState
 import com.oscar.orbimusic.domain.models.Playlist
@@ -26,13 +32,12 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 
 class MediaViewModel (private val songRepository: SongRepository,
                       private val context: Context): ViewModel() {
-    private var audioService: AudioPlayerService? = null;
-    private lateinit var serviceConnection: AudioServiceConnection;
+    private var controller: MediaController? = null;
+    private var controllerFuture: ListenableFuture<MediaController>? = null;
     private val _playerState = MutableStateFlow(PlayerState())
     val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
     private val _allSongs = MutableStateFlow<List<Song>>(emptyList());
@@ -55,19 +60,28 @@ class MediaViewModel (private val songRepository: SongRepository,
     val repeat: StateFlow<Boolean> = _repeat.asStateFlow();
 
 
+    //Los dos se siguen excluyendo entre si, pero ahora ademas se le pasan al
+    //player: el shuffle y el repeat los resuelve el, no playNext() a mano.
     fun setRepeat(status: Boolean){
         _repeat.value = status;
 
         if(_shuffle.value){
             _shuffle.value = false
+            controller?.shuffleModeEnabled = false
         }
+
+        controller?.repeatMode =
+            if (status) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
     }
     fun setShuffle(status: Boolean){
         _shuffle.value = status;
 
         if(_repeat.value){
             _repeat.value = false
+            controller?.repeatMode = Player.REPEAT_MODE_OFF
         }
+
+        controller?.shuffleModeEnabled = status
     }
 
 
@@ -110,7 +124,7 @@ class MediaViewModel (private val songRepository: SongRepository,
     }
 
     private fun closePlayAtCurrentPosition() {
-        closePlay(audioService?.getCurrentPosition() ?: 0L)
+        closePlay(controller?.currentPosition ?: 0L)
     }
 
 
@@ -127,43 +141,74 @@ class MediaViewModel (private val songRepository: SongRepository,
     private fun startUpdatingProgress() {
         viewModelScope.launch {
             while(true){
-                audioService?.let { service ->
-                    _currentPosition.value = service.getCurrentPosition();
-                    _duration.value = service.getDuration();
+                controller?.let { player ->
+                    _currentPosition.value = player.currentPosition;
+                    //duration vale C.TIME_UNSET (negativo) hasta que el player
+                    //prepara la pista; sin acotarlo el slider recibe basura
+                    _duration.value = player.duration.coerceAtLeast(0L);
                 }
                 delay(500.milliseconds);
             }
         }
     }
 
+    //Mismo contenido que el viejo setPlayerStateListener, solo cambia el
+    //envoltorio: ahora son callbacks de Player en vez de un callback propio.
+    private val playerListener = object : Player.Listener {
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            syncPlayerState()
+        }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            syncPlayerState()
+        }
+    }
+
+    private fun syncPlayerState() {
+        val player = controller ?: return
+        //Con shuffle activo currentMediaItemIndex sigue indexando la lista
+        //original: el orden barajado es una traversia aparte. Por eso
+        //queue[index] sigue siendo valido.
+        val index = player.currentMediaItemIndex
+        val isPlaying = player.isPlaying
+
+        val queue = _playerState.value.queue
+        val newSong = queue.getOrNull(index)
+        val pending = pendingPlay
+
+        if (newSong != null && pending != null && pending.songId != newSong.id) {
+            closePlay(pending.durationMs)
+            openPlay(newSong, pending.source)
+        }
+
+        _playerState.update { currentState ->
+            currentState.copy(
+                isPlaying = isPlaying,
+                currentIndex = index,
+                currentSong = if (currentState.queue.isNotEmpty() && index < currentState.queue.size) {
+                    currentState.queue[index]
+                } else currentState.currentSong
+            )
+        }
+    }
+
     private fun connectToAudioService() {
-        serviceConnection = AudioServiceConnection(
-            callback = { service ->
-                audioService = service
-                service.setPlayerStateListener { isPlaying, index ->
-                    val queue = _playerState.value.queue
-                    val newSong = queue.getOrNull(index)
-                    val pending = pendingPlay
-
-                    if (newSong != null && pending != null && pending.songId != newSong.id) {
-                        closePlay(pending.durationMs)
-                        openPlay(newSong, pending.source)
-                    }
-
-                    _playerState.update { currentState ->
-                        currentState.copy(
-                            isPlaying = isPlaying,
-                            currentIndex = index,
-                            currentSong = if (currentState.queue.isNotEmpty() && index < currentState.queue.size) {
-                                currentState.queue[index]
-                            } else currentState.currentSong
-                        )
-                    }
-                }
-            }
+        val token = SessionToken(
+            context,
+            ComponentName(context, AudioPlayerService::class.java)
         )
-        val intent = Intent(context, AudioPlayerService::class.java)
-        context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        controllerFuture = MediaController.Builder(context, token).buildAsync().also { future ->
+            future.addListener({
+                controller = future.get()
+                controller?.addListener(playerListener)
+                //Si el usuario ya habia tocado shuffle/repeat antes de que el
+                //controller existiera, el player no se habria enterado
+                controller?.shuffleModeEnabled = _shuffle.value
+                controller?.repeatMode =
+                    if (_repeat.value) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+            }, MoreExecutors.directExecutor())
+        }
     }
     public fun loadAllSongs(){
         viewModelScope.launch {
@@ -321,8 +366,7 @@ class MediaViewModel (private val songRepository: SongRepository,
 
         _currentPosition.value = 0L
 
-        audioService?.setPlaylist(songs, safeIndex)
-        audioService?.play()
+        setQueue(songs, safeIndex)
 
         openPlay(songs[safeIndex], source)
     }
@@ -351,15 +395,24 @@ class MediaViewModel (private val songRepository: SongRepository,
 
         _currentPosition.value = 0L
 
-        audioService?.setPlaylist(_allSongs.value, index)
-        audioService?.play()
+        setQueue(_allSongs.value, index)
 
         song?.let { openPlay(it, source) }
     }
 
+    //Unico sitio donde se arma la cola del player. Antes esto vivia en
+    //AudioPlayerService.setPlaylist y se llamaba en cada cambio de pista;
+    //ahora solo se llama cuando la cola cambia de verdad.
+    private fun setQueue(songs: List<Song>, startIndex: Int) {
+        val player = controller ?: return
+        player.setMediaItems(songs.map { it.toMediaItem() }, startIndex, 0L)
+        player.prepare()
+        player.play()
+    }
+
     fun pauseSong() {
         _playerState.update { it.copy(isPlaying = false) }
-        audioService?.pause()
+        controller?.pause()
     }
 
     fun togglePlayPause() {
@@ -368,75 +421,41 @@ class MediaViewModel (private val songRepository: SongRepository,
         }
 
         if (_playerState.value.isPlaying) {
-            audioService?.play()
+            controller?.play()
         } else {
-            audioService?.pause()
+            controller?.pause()
         }
     }
 
     fun getNextSong() {
         viewModelScope.launch {
             _playerState.collect { state ->
-                val nextIndexSong = state.currentIndex + 1;
-                _nextSong.value = if(nextIndexSong < state.queue.size){
-                    state.queue[nextIndexSong];
-                }else null
+                //nextMediaItemIndex respeta el orden barajado; antes era
+                //currentIndex + 1, que mentia con el shuffle activo.
+                //C.INDEX_UNSET (-1) significa que no hay siguiente.
+                val nextIndexSong = controller?.nextMediaItemIndex ?: (state.currentIndex + 1)
+                _nextSong.value = state.queue.getOrNull(nextIndexSong)
             }
         }
     }
 
+    //El player resuelve shuffle y repeat por su cuenta: aqui ya no se calcula
+    //ningun indice. Asi los botones de la notificacion y los de la UI acaban
+    //ejecutando exactamente lo mismo.
     fun playNext() {
-        val currentState = _playerState.value
-        val current = currentState.currentIndex;
-        var nextIndex = currentState.currentIndex + 1
-
-        if(_repeat.value){
-            playSong(currentState.queue[current], current)
-            return;
-        }
-
-        if(_shuffle.value){
-            nextIndex = Random.nextInt(0, currentState.queue.size);
-            if(nextIndex == current){
-                nextIndex = Random.nextInt(0, currentState.queue.size);
-            }
-        }
-
-        if (nextIndex < currentState.queue.size) {
-            playSong(currentState.queue[nextIndex], nextIndex)
-        }
-
+        controller?.seekToNextMediaItem()
     }
 
-    fun playNextNoShuffle(){
-        val currentState = _playerState.value
-        val current = currentState.currentIndex;
-        val nextIndex = currentState.currentIndex + 1
-
-        if (nextIndex < currentState.queue.size) {
-            playSong(currentState.queue[nextIndex], nextIndex)
-        }
-    }
-
-
-
+    //seekToPrevious ya trae la regla de los 3 segundos: si la posicion supera
+    //maxSeekToPreviousPosition (3000 ms por defecto) vuelve al inicio de la
+    //pista, si no salta a la anterior.
     fun playPrevious() {
-        val currentState = _playerState.value
-
-        if (currentState.currentPosition > 3000) {
-            _playerState.update { it.copy(currentPosition = 0) }
-            audioService?.seekTo(0)
-        } else {
-            val prevIndex = currentState.currentIndex - 1
-            if (prevIndex >= 0) {
-                playSong(currentState.queue[prevIndex], prevIndex)
-            }
-        }
+        controller?.seekToPrevious()
     }
 
     fun seekTo(position: Long) {
         _playerState.update { it.copy(currentPosition = position) }
-        audioService?.seekTo(position)
+        controller?.seekTo(position)
     }
 
     fun updatePosition(position: Long) {
@@ -446,9 +465,12 @@ class MediaViewModel (private val songRepository: SongRepository,
 
     override fun onCleared() {
         super.onCleared()
-        //Sin esto se pierde siempre la ultima reproduccion de cada sesion
+        //Sin esto se pierde siempre la ultima reproduccion de cada sesion.
+        //Va antes de soltar el controller porque lee su posicion.
         closePlayAtCurrentPosition()
-        context.unbindService(serviceConnection)
+        controller?.removeListener(playerListener)
+        controllerFuture?.let { MediaController.releaseFuture(it) }
+        controller = null
     }
 
 }
