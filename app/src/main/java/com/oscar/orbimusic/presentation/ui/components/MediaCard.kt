@@ -118,11 +118,11 @@ fun MediaSongCard(
     Row(
         modifier
             .fillMaxWidth()
-            .heightIn(min = 72.dp)
+            .heightIn(min = 64.dp)
             .background(
                 if (isPlaying) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent
             )
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         val artShape = RoundedCornerShape(8.dp)

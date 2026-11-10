@@ -735,10 +735,10 @@ private fun PlaylistSummaryCard(
     val isFavorites = summary.id == null
     val haptics = LocalHapticFeedback.current
 
+
     Column(
         modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.primary)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick?.let { accion ->
@@ -748,11 +748,10 @@ private fun PlaylistSummaryCard(
                     }
                 }
             )
-            .padding(8.dp)
+            .padding(5.dp)
     ) {
         PlaylistCoverMosaic(
             coverPaths = summary.coverPaths,
-            //Favoritos se distingue con su corazon rojo cuando no hay portadas
             fallbackIcon = if (isFavorites) Icons.Rounded.Favorite
             else Icons.Rounded.QueueMusic,
             fallbackTint = if (isFavorites) FavoriteRed
@@ -764,12 +763,13 @@ private fun PlaylistSummaryCard(
                 .clip(RoundedCornerShape(8.dp))
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(5.dp))
 
         Text(
             text = summary.name,
             style = MaterialTheme.typography.titleLarge.copy(
                 fontSize = 15.sp,
+                lineHeight = 20.sp,
                 fontWeight = FontWeight.Medium,
                 letterSpacing = (-0.2).sp
             ),
@@ -778,7 +778,10 @@ private fun PlaylistSummaryCard(
         )
         Text(
             text = if (summary.songCount == 1) "1 canción" else "${summary.songCount} canciones",
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp),
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 12.5.sp,
+                lineHeight = 14.sp
+            ),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1
         )
@@ -863,10 +866,6 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
     Column(Modifier.fillMaxSize()) {
 
-        //targetState es openPlaylist y NO el resumen: el resumen es un objeto
-        //nuevo en cada emision del Flow, asi que la animacion se relanzaria
-        //cada vez que cambiara cualquier cosa de la base. PlaylistSelection es
-        //estable por igualdad.
         AnimatedContent(
             targetState = openPlaylist,
             modifier = Modifier.weight(1f),
@@ -891,15 +890,9 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                     }
                 }
 
-                //Al cerrar, el Flow emite vacio de inmediato y el detalle que
-                //sale parpadearia a cero canciones. Mientras esta rama es la
-                //activa sigue en vivo; cuando deja de serlo, se congela.
                 var branchSongs by remember { mutableStateOf(playlistSongs) }
                 if (selection == openPlaylist) branchSongs = playlistSongs
 
-                //Los dos remember van sin condicion: un remember dentro de un
-                //if cambia de posicion en la slot table si la condicion cambia,
-                //y el estado se pierde o se confunde. La eleccion va despues.
                 val detailListState = rememberLazyListState()
                 val listState = if (openSummary == null) topLevelListState else detailListState
 
@@ -972,11 +965,6 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
 
                 LazyColumn(
                     Modifier.weight(1f),
-                    //El izado conserva el scroll del primer nivel al ir y venir;
-                    //el del detalle es propio y arranca desde arriba
-                    state = listState,
-                    //En el detalle no hay margen lateral: la caratula tiene que
-                    //llegar a las orillas. Las canciones se lo ponen ellas.
                     contentPadding = if (openSummary == null) {
                         PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                     } else {
@@ -1068,7 +1056,7 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                             key = { par -> par.first().id ?: -1L }
                         ) { par ->
                             Row(
-                                Modifier.padding(vertical = 4.dp),
+                                Modifier.padding(vertical = 2.dp),
                                 horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
                                 par.forEach { summary ->

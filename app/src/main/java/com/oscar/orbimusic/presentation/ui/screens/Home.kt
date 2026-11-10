@@ -125,7 +125,7 @@ fun HomeScreen(homeViewModel: HomeViewModel){
 @Composable
 private fun CarouselCard(coverUrl: String, title: String, subtitle: String) {
     Column(Modifier.width(CARD_SIZE)) {
-        
+
         AsyncImage(
             model = coverUrl,
             contentDescription = title,
