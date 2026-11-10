@@ -15,11 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,6 +37,7 @@ import com.oscar.orbimusic.presentation.ui.animations.PlayerContainerKey
 import com.oscar.orbimusic.presentation.ui.animations.PlayerTitleKey
 import com.oscar.orbimusic.presentation.ui.animations.sharedPlayerBounds
 import com.oscar.orbimusic.presentation.ui.animations.sharedPlayerElement
+import com.oscar.orbimusic.presentation.ui.icons.PlayerIcons
 import com.oscar.orbimusic.presentation.ui.theme.OrbiMusicTheme
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
 
@@ -158,7 +154,7 @@ private fun MiniPlayerContent(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            MiniPlayerIconButton(Icons.Rounded.SkipPrevious, "Canción anterior", onPrevious)
+            MiniPlayerIconButton(PlayerIcons.Previous, "Canción anterior", onPrevious)
 
             //Unico elemento relleno de la barra: ahi se concentra el peso visual
             Box(
@@ -176,7 +172,7 @@ private fun MiniPlayerContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        imageVector = if (isPlaying) PlayerIcons.Pause else PlayerIcons.Play,
                         contentDescription = if (isPlaying) "Pausar" else "Reproducir",
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.secondary
@@ -184,7 +180,7 @@ private fun MiniPlayerContent(
                 }
             }
 
-            MiniPlayerIconButton(Icons.Rounded.SkipNext, "Siguiente canción", onNext)
+            MiniPlayerIconButton(PlayerIcons.Next, "Siguiente canción", onNext)
         }
     }
 }

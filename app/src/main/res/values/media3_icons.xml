@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sobrescribe los iconos que DefaultMediaNotificationProvider usa en la
+  notificacion. En media3-session 1.1.1 estos nombres NO son archivos: son
+  alias declarados en el values.xml de la libreria, apuntando a los drawables
+  del sistema (@android:drawable/ic_media_play y compania, que son de 2010).
+  Al redeclararlos aqui con el mismo nombre, los del app ganan.
+
+  Apuntan a los mismos XML que lee la UI de Compose (ver PlayerIcons.kt), que
+  es justo el punto: un solo dibujo para los dos sitios.
+-->
+<resources>
+    <drawable name="media3_notification_play">@drawable/ic_player_play</drawable>
+    <drawable name="media3_notification_pause">@drawable/ic_player_pause</drawable>
+    <drawable name="media3_notification_seek_to_next">@drawable/ic_player_next</drawable>
+    <drawable name="media3_notification_seek_to_previous">@drawable/ic_player_previous</drawable>
+</resources>

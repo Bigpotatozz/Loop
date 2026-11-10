@@ -1,0 +1,18 @@
+<!--
+  Icons.Rounded.PlayArrow de Material, pasado a vector drawable.
+  Lo leen los dos lados: la UI de Compose via PlayerIcons.Play y la
+  notificacion via el alias media3_notification_play en values/media3_icons.xml.
+  Si se cambia el dibujo aqui, cambia en los dos sitios a la vez.
+
+  Sin android:tint a proposito: el color lo pone quien lo dibuja. En Compose
+  lo tinta Icon() y en la notificacion lo tinta el sistema.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M8,6.82v10.36c0,0.79 0.87,1.27 1.54,0.84l8.14,-5.18c0.62,-0.39 0.62,-1.29 0,-1.69L9.54,5.98C8.87,5.55 8,6.03 8,6.82z" />
+</vector>

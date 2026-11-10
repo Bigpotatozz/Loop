@@ -38,9 +38,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QueueMusic
-import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -87,6 +85,7 @@ import com.oscar.orbimusic.presentation.ui.animations.LocalPlayerAnimatedScope
 import com.oscar.orbimusic.presentation.ui.animations.LocalPlaylistAnimatedScope
 import com.oscar.orbimusic.presentation.ui.animations.playlistCoverKey
 import com.oscar.orbimusic.presentation.ui.animations.sharedPlaylistElement
+import com.oscar.orbimusic.presentation.ui.icons.PlayerIcons
 import com.oscar.orbimusic.presentation.ui.theme.FavoriteRed
 import com.oscar.orbimusic.presentation.utils.parseTotalTime
 import kotlin.random.Random
@@ -699,7 +698,7 @@ private fun PlaylistDetailHeader(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PlaylistActionButton(
                     label = "Reproducir",
-                    icon = Icons.Rounded.PlayArrow,
+                    icon = PlayerIcons.Play,
                     filled = true,
                     enabled = hasSongs,
                     onClick = onPlay,
@@ -707,7 +706,7 @@ private fun PlaylistDetailHeader(
                 )
                 PlaylistActionButton(
                     label = "Aleatorio",
-                    icon = Icons.Rounded.Shuffle,
+                    icon = PlayerIcons.Shuffle,
                     filled = false,
                     enabled = hasSongs,
                     onClick = onShuffle,

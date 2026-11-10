@@ -30,13 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PlaylistAdd
-import androidx.compose.material.icons.rounded.Repeat
-import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -74,6 +68,7 @@ import com.oscar.orbimusic.presentation.ui.animations.PlayerContainerKey
 import com.oscar.orbimusic.presentation.ui.animations.PlayerTitleKey
 import com.oscar.orbimusic.presentation.ui.components.AddToPlaylistDialog
 import com.oscar.orbimusic.presentation.ui.components.AlbumArtPlaceholder
+import com.oscar.orbimusic.presentation.ui.icons.PlayerIcons
 import com.oscar.orbimusic.presentation.ui.theme.FavoriteRed
 import com.oscar.orbimusic.presentation.ui.theme.PlayerInk
 import com.oscar.orbimusic.presentation.ui.theme.PlayerSurface
@@ -367,7 +362,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             verticalAlignment = Alignment.CenterVertically
         ) {
             PlayerIconButton(
-                icon = Icons.Rounded.Shuffle,
+                icon = PlayerIcons.Shuffle,
                 contentDescription = if (shuffle) "Desactivar aleatorio" else "Activar aleatorio",
                 iconSize = 22.dp,
                 tint = if (shuffle) playerInk else playerInk.copy(alpha = 0.4f),
@@ -375,7 +370,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             )
 
             PlayerIconButton(
-                icon = Icons.Rounded.SkipPrevious,
+                icon = PlayerIcons.Previous,
                 contentDescription = "Canción anterior",
                 iconSize = 32.dp,
                 tint = playerInk,
@@ -392,7 +387,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (playerState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    imageVector = if (playerState.isPlaying) PlayerIcons.Pause else PlayerIcons.Play,
                     contentDescription = if (playerState.isPlaying) "Pausar" else "Reproducir",
                     modifier = Modifier.size(28.dp),
                     tint = background
@@ -400,7 +395,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             }
 
             PlayerIconButton(
-                icon = Icons.Rounded.SkipNext,
+                icon = PlayerIcons.Next,
                 contentDescription = "Siguiente canción",
                 iconSize = 32.dp,
                 tint = playerInk,
@@ -408,7 +403,7 @@ fun ExpandedPlayerScreen(playerState: PlayerState, mediaViewModel: MediaViewMode
             )
 
             PlayerIconButton(
-                icon = Icons.Rounded.Repeat,
+                icon = PlayerIcons.Repeat,
                 contentDescription = if (repeat) "Desactivar repetición" else "Repetir canción",
                 iconSize = 22.dp,
                 tint = if (repeat) playerInk else playerInk.copy(alpha = 0.4f),
