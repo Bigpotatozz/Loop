@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,7 +26,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.OndemandVideo
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -57,6 +60,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.util.UnstableApi
+import com.oscar.orbimusic.data.models.SearchSource
 import com.oscar.orbimusic.presentation.ui.components.DownloadRowState
 import com.oscar.orbimusic.presentation.ui.components.SearchResultCard
 import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
@@ -75,6 +79,8 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
 
     val searchResults by downloadViewModel.searchResults.collectAsState()
     val isSearching by downloadViewModel.isSearching.collectAsState()
+    val searchSource by downloadViewModel.searchSource.collectAsState()
+    val searchNotice by downloadViewModel.searchNotice.collectAsState()
     val isDownloading by downloadViewModel.isDownloading.collectAsState()
     val downloadingId by downloadViewModel.downloadingId.collectAsState()
     val downloadProgress by downloadViewModel.downloadProgress.collectAsState()
@@ -141,17 +147,40 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
             shape = RoundedCornerShape(12.dp),
             placeholder = {
                 Text(
-                    text = "Artista, canción o álbum...",
+                    text = "Buscar en ${searchSource.label}...",
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             leadingIcon = {
-                Icon(
-                    imageVector = Icons.Rounded.Search,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    modifier = Modifier
+                        .padding(start = 10.dp, end = 4.dp)
+                        .clip(RoundedCornerShape(100))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                        .clickable { downloadViewModel.toggleSearchSource() }
+                        .padding(horizontal = 8.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Icon(
+                        imageVector = if (searchSource == SearchSource.YT_MUSIC)
+                            Icons.Rounded.MusicNote
+                        else Icons.Rounded.OndemandVideo,
+                        //La descripcion va aqui y no en el chevron: los dos iconos
+                        //son un solo control para el lector de pantalla
+                        contentDescription =
+                            "Fuente: ${searchSource.label}. Tocar para buscar en ${searchSource.other().label}",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Icon(
+                        imageVector = Icons.Rounded.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
             },
             trailingIcon = {
                 //Solo aparece si hay algo escrito; limpiar devuelve la pantalla a los widgets
@@ -267,55 +296,73 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
                     entranceDone = true
                 }
 
-                LazyColumn(
+                Column(
                     Modifier
                         .fillMaxWidth()
-                        .weight(1f),
-                    contentPadding = PaddingValues(vertical = 8.dp)
+                        .weight(1f)
                 ) {
-                    itemsIndexed(searchResults, key = { _, result -> result.id }) { index, result ->
-                        //Si la fila se compone despues de la cascada (scroll),
-                        //arranca ya visible y no se anima
-                        var visible by remember(result.id) { mutableStateOf(entranceDone) }
-                        LaunchedEffect(result.id) {
-                            if (!visible) {
-                                //El tope evita que las ultimas filas tarden casi
-                                //un segundo en aparecer
-                                delay(minOf(index, STAGGER_MAX_STEPS) * STAGGER_STEP_MS)
-                                visible = true
-                            }
-                        }
+                 
+                    searchNotice?.let { from ->
+                        Text(
+                            text = "Sin resultados en ${from.label}, mostrando ${from.other().label}",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 22.dp, vertical = 8.dp)
+                        )
+                    }
 
-                        AnimatedVisibility(
-                            visible = visible,
-                            enter = fadeIn(animationSpec = tween(ENTRANCE_DURATION_MS.toInt())) +
-                                    //Arranca un cuarto de su altura mas abajo
-                                    slideInVertically(
-                                        animationSpec = tween(ENTRANCE_DURATION_MS.toInt())
-                                    ) { it / 4 }
-                        ) {
-                            //El progreso es uno solo porque solo corre una
-                            //descarga a la vez; downloadingId dice a que fila toca
-                            val rowState = when {
-                                result.id in completedDownloads -> DownloadRowState.Done
-                                result.id != downloadingId -> DownloadRowState.Idle
-                                downloadProgress < 0 -> DownloadRowState.Starting
-                                else -> DownloadRowState.Running(downloadProgress)
+                    LazyColumn(
+                        Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        itemsIndexed(searchResults, key = { _, result -> result.id }) { index, result ->
+                            //Si la fila se compone despues de la cascada (scroll),
+                            //arranca ya visible y no se anima
+                            var visible by remember(result.id) { mutableStateOf(entranceDone) }
+                            LaunchedEffect(result.id) {
+                                if (!visible) {
+                                    //El tope evita que las ultimas filas tarden casi
+                                    //un segundo en aparecer
+                                    delay(minOf(index, STAGGER_MAX_STEPS) * STAGGER_STEP_MS)
+                                    visible = true
+                                }
                             }
 
-                            SearchResultCard(
-                                result = result,
-                                //El servicio recibe la url tal cual viene de la busqueda
-                                onDownload = {
-                                    downloadViewModel.DownloadSong(
-                                        result.id,
-                                        result.url,
-                                        result.title
-                                    )
-                                },
-                                state = rowState,
-                                downloadEnabled = !isDownloading
-                            )
+                            AnimatedVisibility(
+                                visible = visible,
+                                enter = fadeIn(animationSpec = tween(ENTRANCE_DURATION_MS.toInt())) +
+                                        //Arranca un cuarto de su altura mas abajo
+                                        slideInVertically(
+                                            animationSpec = tween(ENTRANCE_DURATION_MS.toInt())
+                                        ) { it / 4 }
+                            ) {
+                                //El progreso es uno solo porque solo corre una
+                                //descarga a la vez; downloadingId dice a que fila toca
+                                val rowState = when {
+                                    result.id in completedDownloads -> DownloadRowState.Done
+                                    result.id != downloadingId -> DownloadRowState.Idle
+                                    downloadProgress < 0 -> DownloadRowState.Starting
+                                    else -> DownloadRowState.Running(downloadProgress)
+                                }
+
+                                SearchResultCard(
+                                    result = result,
+                                    //El servicio recibe la url tal cual viene de la busqueda
+                                    onDownload = {
+                                        downloadViewModel.DownloadSong(
+                                            result.id,
+                                            result.url,
+                                            result.title
+                                        )
+                                    },
+                                    state = rowState,
+                                    downloadEnabled = !isDownloading
+                                )
+                            }
                         }
                     }
                 }

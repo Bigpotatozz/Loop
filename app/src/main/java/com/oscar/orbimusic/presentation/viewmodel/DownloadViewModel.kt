@@ -10,6 +10,7 @@ import androidx.media3.common.util.Log
 import androidx.media3.common.util.UnstableApi
 import com.oscar.orbimusic.data.audio.DownloadMusicService
 import com.oscar.orbimusic.data.audio.DownloadMusicServiceConnection
+import com.oscar.orbimusic.data.models.SearchSource
 import com.oscar.orbimusic.data.models.YtSearchResult
 import com.oscar.orbimusic.di.AppModule
 import kotlinx.coroutines.Job
@@ -56,8 +57,19 @@ class DownloadViewModel(private val context: Context): ViewModel() {
     private val _isSearching = MutableStateFlow(false);
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow();
 
+    //Fuente elegida por el usuario.
+    private val _searchSource = MutableStateFlow(SearchSource.YT_MUSIC);
+    val searchSource: StateFlow<SearchSource> = _searchSource.asStateFlow();
+
+    //La fuente que quedo vacia y obligo a reintentar en la otra.
+    private val _searchNotice = MutableStateFlow<SearchSource?>(null);
+    val searchNotice: StateFlow<SearchSource?> = _searchNotice.asStateFlow();
+
     //Referencia a la busqueda en curso para poder cancelarla cuando llega otra.
     private var searchJob: Job? = null;
+
+    //El ultimo texto buscado.
+    private var lastQuery: String = "";
 
     //Cuando se construye la opantalla se conecta automaticamente al servicio de descargas
     init {
@@ -110,7 +122,8 @@ class DownloadViewModel(private val context: Context): ViewModel() {
         context.unbindService(serviceConnection)
     }
 
-    //Lanza la busqueda en YouTube. El servicio devuelve la lista directo
+    //Lanza la busqueda en la fuente seleccionada. El servicio devuelve el
+    //SearchOutcome, que ademas de los resultados dice si hubo cambio de fuente.
     fun search(query: String){
         //Si ya habia una busqueda corriendo, se descarta: gana siempre la ultima
         searchJob?.cancel();
@@ -126,11 +139,27 @@ class DownloadViewModel(private val context: Context): ViewModel() {
             return;
         }
 
+        lastQuery = query;
+
         searchJob = viewModelScope.launch {
             _isSearching.value = true;
-            val results = service.searchOnYt(query);
-            _searchResults.value = results;
+            //El aviso viejo se limpia al arrancar y no al terminar, para que no
+            //se quede un banner de la busqueda anterior encima de los resultados nuevos
+            _searchNotice.value = null;
+            val outcome = service.searchOnYt(query, _searchSource.value);
+            _searchResults.value = outcome.results;
+            _searchNotice.value = outcome.fallbackFrom;
             _isSearching.value = false;
+        }
+    }
+
+    //Cambia de fuente
+    fun toggleSearchSource(){
+        _searchSource.value = _searchSource.value.other();
+
+        if(lastQuery.isNotBlank()){
+            //search() ya cancela la busqueda anterior en su primera linea
+            search(lastQuery);
         }
     }
 
@@ -147,6 +176,8 @@ class DownloadViewModel(private val context: Context): ViewModel() {
         _isSearching.value = false;
         //Las palomitas viven mientras la lista este en pantalla
         _completedDownloads.value = emptySet();
+        _searchNotice.value = null;
+        lastQuery = "";
     }
 
     fun downloadFromUrl(url: String) {

@@ -27,9 +27,6 @@ interface FavoritesDao {
     @Query("SELECT songId FROM favorites")
     fun getFavoriteIds(): Flow<List<Long>>
 
-    //Caratulas para el mosaico de la fila de Favoritos. Aqui si se puede usar
-    //LIMIT porque es una sola lista; en playlistDetalle habria que limitar por
-    //playlist, que es lo que SQLite no deja sin funciones de ventana.
     @Query("""
         SELECT songs.albumArtPath FROM songs
         INNER JOIN favorites ON songs.id = favorites.songId

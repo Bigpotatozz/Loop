@@ -14,6 +14,8 @@ import androidx.core.app.NotificationCompat
 import androidx.media3.common.util.UnstableApi
 import com.oscar.orbimusic.R
 import com.oscar.orbimusic.data.models.DownloadProgress
+import com.oscar.orbimusic.data.models.SearchOutcome
+import com.oscar.orbimusic.data.models.SearchSource
 import com.oscar.orbimusic.data.models.YtSearchResult
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
@@ -135,40 +137,55 @@ class DownloadMusicService: Service() {
     }
 
 
-    //Busca en YouTube Music y, si no devuelve nada, reintenta en YouTube normal.
-    suspend fun searchOnYt(query: String): List<YtSearchResult> = withContext(Dispatchers.IO) {
+    //Busca en la fuente que pidio el usuario. Si eligio YT Music y vuelve vacio,
+    //reintenta en YouTube y lo reporta en fallbackFrom para que la pantalla avise.
 
-        if (query.isBlank()) return@withContext emptyList()
+    suspend fun searchOnYt(query: String, source: SearchSource): SearchOutcome =
+        withContext(Dispatchers.IO) {
 
-        if (!isInitialized.await()) {
-            Log.e("DownloadService", "YouTubeDL no inicializado")
-            return@withContext emptyList()
+            if (query.isBlank()) return@withContext SearchOutcome(emptyList())
+
+            if (!isInitialized.await()) {
+                Log.e("DownloadService", "YouTubeDL no inicializado")
+                return@withContext SearchOutcome(emptyList())
+            }
+
+            val results = executeSearch(buildSearchRequest(source, query), source.label)
+
+            if (results.isNotEmpty() || source != SearchSource.YT_MUSIC) {
+                return@withContext SearchOutcome(results)
+            }
+
+            val fallback = source.other()
+            Log.d("DownloadService", "Sin resultados en ${source.label}, reintentando en ${fallback.label}")
+            val fallbackResults = executeSearch(buildSearchRequest(fallback, query), fallback.label)
+
+            //Si el fallback tampoco trajo nada no hay nada que avisar: para la
+            //pantalla es una busqueda vacia normal, no un cambio de fuente
+            SearchOutcome(
+                results = fallbackResults,
+                fallbackFrom = if (fallbackResults.isNotEmpty()) source else null
+            )
         }
 
-        val encoded = URLEncoder.encode(query, "UTF-8")
+    
+    private fun buildSearchRequest(source: SearchSource, query: String): YoutubeDLRequest {
+        val request = when (source) {
+            SearchSource.YT_MUSIC -> {
+                val encoded = URLEncoder.encode(query, "UTF-8")
+                YoutubeDLRequest("https://music.youtube.com/search?q=$encoded#songs").apply {
+                    addOption("--playlist-end", SEARCH_RESULTS.toString())
+                }
+            }
 
-        val results = executeSearch(
-            YoutubeDLRequest("https://music.youtube.com/search?q=$encoded#songs").apply {
-                addOption("--flat-playlist")
-                addOption("--dump-json")
-                addOption("--no-warnings")
-                addOption("--playlist-end", SEARCH_RESULTS.toString())
-            },
-            source = "YouTube Music"
-        )
+            SearchSource.YOUTUBE -> YoutubeDLRequest("ytsearch${SEARCH_RESULTS}:$query")
+        }
 
-        if (results.isNotEmpty()) return@withContext results
-
-        //Fallback a YouTube normal si YT Music no devolvio nada
-        Log.d("DownloadService", "Sin resultados en YT Music, reintentando en YouTube")
-        executeSearch(
-            YoutubeDLRequest("ytsearch${SEARCH_RESULTS}:$query").apply {
-                addOption("--flat-playlist")
-                addOption("--dump-json")
-                addOption("--no-warnings")
-            },
-            source = "YouTube"
-        )
+        return request.apply {
+            addOption("--flat-playlist")
+            addOption("--dump-json")
+            addOption("--no-warnings")
+        }
     }
 
     private fun executeSearch(request: YoutubeDLRequest, source: String): List<YtSearchResult> {

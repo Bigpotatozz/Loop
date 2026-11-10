@@ -183,14 +183,30 @@ io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1
 - Vive en `DownloadMusicService` por decisión explícita: todo lo de yt-dlp
   (init, update, búsqueda y descarga) queda centralizado ahí aunque el nombre
   del servicio no lo refleje.
-- Es `suspend` y **no** fire-and-forget como la descarga: devuelve la lista
+- Es `suspend` y **no** fire-and-forget como la descarga: devuelve el resultado
   directamente, sin callback. Tampoco levanta foreground ni notificación —
   es pedir y recibir, no trabajo largo.
 - Espera el mismo `isInitialized` que la descarga; sin eso yt-dlp lanza
   "instance not initialized".
-- Usa `ytsearch20:<query>` con `--flat-playlist --dump-json --no-warnings`.
-  **`--flat-playlist` es crítico**: sin él yt-dlp extrae los 20 videos uno por
-  uno (20 peticiones completas) y la búsqueda se vuelve inusable.
+
+**Dos fuentes, elegidas por el usuario.** La firma es
+`searchOnYt(query, source: SearchSource): SearchOutcome`. `SearchSource` es un enum
+de dos valores (`YT_MUSIC` / `YOUTUBE`) con su etiqueta visible; `buildSearchRequest()`
+lo traduce a petición de yt-dlp:
+- `YT_MUSIC` → `https://music.youtube.com/search?q=<encoded>#songs` + `--playlist-end N`.
+  El query va **URL-encoded**.
+- `YOUTUBE` → `ytsearch<N>:<query>`, con el query **crudo** y el límite en el prefijo.
+
+Ambas comparten `--flat-playlist --dump-json --no-warnings`.
+**`--flat-playlist` es crítico**: sin él yt-dlp extrae los N videos uno por uno
+(N peticiones completas) y la búsqueda se vuelve inusable.
+
+**Fallback de un solo sentido.** Si el usuario pidió YT Music y vuelve vacío, se
+reintenta en YouTube y se reporta en `SearchOutcome.fallbackFrom` para que la
+pantalla lo avise con un banner — antes el cambio era silencioso. No opera al revés:
+el catálogo de YouTube es prácticamente un superconjunto, así que caer de YouTube a
+YT Music no aportaría nada y ensuciaría la búsqueda. Si el reintento tampoco trae
+nada, `fallbackFrom` queda en `null`: no hay cambio de fuente que avisar.
 - `--dump-json` imprime **un JSON por línea**, no un array. Se parsea con
   `org.json.JSONObject` (viene en Android, cero dependencias nuevas) y cada
   línea va en su propio try/catch para que un resultado roto no tumbe los otros.
@@ -199,8 +215,18 @@ io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1
 - La miniatura se construye como `https://i.ytimg.com/vi/<id>/hqdefault.jpg` en
   vez de leer el array `thumbnails`: siempre existe para un id válido y trae un
   tamaño predecible, en lugar de la de 1280px que yt-dlp deja al final del array.
-- Devuelve `emptyList()` si falla. **No distingue "sin resultados" de "error"**;
-  si hace falta ese estado en la UI, hay que agregarlo.
+- Devuelve resultados vacíos si falla. **No distingue "sin resultados" de "error"**;
+  `executeSearch()` devuelve `emptyList()` en ambos casos y la pantalla los pinta
+  igual (`DownloadScreen.kt`, rama `hasSearched`). `SearchOutcome` es el lugar
+  natural para arreglarlo cuando haga falta (un campo `failed: Boolean`).
+
+**Selector en la UI.** El `leadingIcon` del campo de búsqueda dejó de ser una lupa
+decorativa y ahora alterna la fuente (`DownloadViewModel.toggleSearchSource()`).
+Como un icono por sí solo es poco descubrible, el **placeholder nombra la fuente
+activa** ("Buscar en YouTube Music...") y el `contentDescription` dice estado y
+acción. Al cambiar de fuente con una búsqueda activa se relanza sola: el ViewModel
+guarda `lastQuery` para no depender del estado de la pantalla, así funciona igual
+si la búsqueda vino del campo o de un widget de género.
 
 ### Sincronización con FileScanner
 - FileScanner escanea la misma carpeta que DownloadService
