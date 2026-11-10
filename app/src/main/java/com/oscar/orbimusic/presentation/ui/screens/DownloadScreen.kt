@@ -130,12 +130,6 @@ fun DownloadScreen(downloadViewModel: DownloadViewModel) {
                     letterSpacing = (-0.5).sp
                 )
             )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = "Descubre algo nuevo",
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
 
         TextField(

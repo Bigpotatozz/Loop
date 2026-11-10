@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,11 +34,18 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.oscar.orbimusic.presentation.models.TopAlbumsState
 import com.oscar.orbimusic.presentation.viewmodel.HomeViewModel
+import java.util.Calendar
 
 private val CARD_SIZE = 140.dp
 private val CARD_GAP = 10
     .dp
 private val CAROUSEL_HEIGHT = 210.dp
+
+private fun greetingForHour(hour: Int): String = when (hour) {
+    in 6..11 -> "Buenos días"
+    in 12..19 -> "Buenas tardes"
+    else -> "Buenas noches"
+}
 
 @Composable
 fun HomeScreen(homeViewModel: HomeViewModel){
@@ -50,21 +58,14 @@ fun HomeScreen(homeViewModel: HomeViewModel){
             .verticalScroll(rememberScrollState())
     ) {
 
-        Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp, bottom = 16.dp)) {
+        val saludo = remember { greetingForHour(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) }
+        Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp, bottom = 20.dp)) {
             Text(
-                text = "Inicio",
-                style = MaterialTheme.typography.headlineSmall.copy(
+                text = saludo,
+                style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp
                 )
-            )
-
-            Spacer(Modifier.height(2.dp))
-
-            Text(
-                text = "Tu música, siempre a la mano",
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
