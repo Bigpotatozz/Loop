@@ -78,10 +78,10 @@ class MediaViewModel (private val songRepository: SongRepository,
 
         if(_repeat.value){
             _repeat.value = false
-            controller?.repeatMode = Player.REPEAT_MODE_OFF
         }
 
         controller?.shuffleModeEnabled = status
+        controller?.repeatMode = if (status) Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
     }
 
 
@@ -205,8 +205,11 @@ class MediaViewModel (private val songRepository: SongRepository,
                 //Si el usuario ya habia tocado shuffle/repeat antes de que el
                 //controller existiera, el player no se habria enterado
                 controller?.shuffleModeEnabled = _shuffle.value
-                controller?.repeatMode =
-                    if (_repeat.value) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+                controller?.repeatMode = when {
+                    _repeat.value  -> Player.REPEAT_MODE_ONE
+                    _shuffle.value -> Player.REPEAT_MODE_ALL
+                    else           -> Player.REPEAT_MODE_OFF
+                }
             }, MoreExecutors.directExecutor())
         }
     }
@@ -439,10 +442,12 @@ class MediaViewModel (private val songRepository: SongRepository,
         }
     }
 
-    //El player resuelve shuffle y repeat por su cuenta: aqui ya no se calcula
-    //ningun indice. Asi los botones de la notificacion y los de la UI acaban
-    //ejecutando exactamente lo mismo.
+
     fun playNext() {
+        if (_repeat.value) {
+            controller?.seekTo(0L)
+            return
+        }
         controller?.seekToNextMediaItem()
     }
 
