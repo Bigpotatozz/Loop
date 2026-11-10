@@ -1,5 +1,6 @@
 package com.oscar.orbimusic.data.network
 
+import com.oscar.orbimusic.data.network.dto.AlbumDto
 import com.oscar.orbimusic.data.network.dto.ArtistDto
 import com.oscar.orbimusic.data.network.dto.DeezerListDto
 import com.oscar.orbimusic.data.network.dto.TrackDto
@@ -19,5 +20,11 @@ interface DeezerClient {
     suspend fun getTopTracks(
         @Query("limit") limit: Int = 10
     ): DeezerListDto<TrackDto>
+
+    //El top de albumes. Mismo criterio de pais por IP que el de canciones.
+    @GET("chart/0/albums")
+    suspend fun getTopAlbums(
+        @Query("limit") limit: Int = 10
+    ): DeezerListDto<AlbumDto>
 
 }

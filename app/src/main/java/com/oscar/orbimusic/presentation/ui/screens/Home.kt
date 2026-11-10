@@ -31,18 +31,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.oscar.orbimusic.domain.models.Track
-import com.oscar.orbimusic.presentation.models.TopTracksState
+import com.oscar.orbimusic.presentation.models.TopAlbumsState
 import com.oscar.orbimusic.presentation.viewmodel.HomeViewModel
 
-private val CARD_SIZE = 150.dp
-private val CARD_GAP = 12.dp
+private val CARD_SIZE = 140.dp
+private val CARD_GAP = 10
+    .dp
 private val CAROUSEL_HEIGHT = 210.dp
 
 @Composable
 fun HomeScreen(homeViewModel: HomeViewModel){
 
-    val topTracks by homeViewModel.topTracks.collectAsState()
+    val topAlbums by homeViewModel.topAlbums.collectAsState()
 
     Column(
         Modifier
@@ -70,7 +70,7 @@ fun HomeScreen(homeViewModel: HomeViewModel){
 
 
         Text(
-            text = "Top 10 de hoy",
+            text = "Top 10 álbumes",
             style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
@@ -79,8 +79,8 @@ fun HomeScreen(homeViewModel: HomeViewModel){
             modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp)
         )
 
-        when (val state = topTracks) {
-            TopTracksState.Loading -> {
+        when (val state = topAlbums) {
+            TopAlbumsState.Loading -> {
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -91,7 +91,7 @@ fun HomeScreen(homeViewModel: HomeViewModel){
                 }
             }
 
-            is TopTracksState.Error -> {
+            is TopAlbumsState.Error -> {
                 Text(
                     text = state.message,
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
@@ -100,15 +100,18 @@ fun HomeScreen(homeViewModel: HomeViewModel){
                 )
             }
 
-            is TopTracksState.Ready -> {
-
+            is TopAlbumsState.Ready -> {
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 22.dp),
                     horizontalArrangement = Arrangement.spacedBy(CARD_GAP)
                 ) {
-                    items(state.tracks, key = { it.id }) { track ->
-                        TopTrackCard(track)
+                    items(state.albums, key = { it.id }) { album ->
+                        CarouselCard(
+                            coverUrl = album.coverXl,
+                            title = album.title,
+                            subtitle = album.artistName
+                        )
                     }
                 }
             }
@@ -118,14 +121,14 @@ fun HomeScreen(homeViewModel: HomeViewModel){
     }
 }
 
-//Caratula grande con el titulo y el artista debajo.
+//Caratula grande con el titulo y un subtitulo debajo.
 @Composable
-private fun TopTrackCard(track: Track) {
+private fun CarouselCard(coverUrl: String, title: String, subtitle: String) {
     Column(Modifier.width(CARD_SIZE)) {
-
+        
         AsyncImage(
-            model = track.coverXl,
-            contentDescription = track.title,
+            model = coverUrl,
+            contentDescription = title,
             modifier = Modifier
                 .size(CARD_SIZE)
                 .clip(RoundedCornerShape(12.dp)),
@@ -135,7 +138,7 @@ private fun TopTrackCard(track: Track) {
         Spacer(Modifier.height(8.dp))
 
         Text(
-            text = track.title,
+            text = title,
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
@@ -145,7 +148,7 @@ private fun TopTrackCard(track: Track) {
         )
 
         Text(
-            text = track.artistName,
+            text = subtitle,
             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,

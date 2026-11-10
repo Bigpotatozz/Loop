@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.oscar.orbimusic.domain.repository.DeezerRepository
+import com.oscar.orbimusic.presentation.models.TopAlbumsState
 import com.oscar.orbimusic.presentation.models.TopTracksState
 import com.oscar.orbimusic.presentation.models.TrendingState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,9 +21,13 @@ class HomeViewModel(
     private val _topTracks = MutableStateFlow<TopTracksState>(TopTracksState.Loading);
     val topTracks: StateFlow<TopTracksState> = _topTracks.asStateFlow();
 
+    private val _topAlbums = MutableStateFlow<TopAlbumsState>(TopAlbumsState.Loading);
+    val topAlbums: StateFlow<TopAlbumsState> = _topAlbums.asStateFlow();
+
     init {
         loadTrending();
         loadTopTracks();
+        loadTopAlbums();
     }
     fun loadTrending() {
         viewModelScope.launch {
@@ -59,6 +64,24 @@ class HomeViewModel(
                     Log.e("HomeViewModel", "Fallo al traer el top de canciones", e)
                     _topTracks.value = TopTracksState.Error(
                         e.message ?: "No se pudo cargar el top de canciones"
+                    );
+                }
+        }
+    }
+
+    fun loadTopAlbums() {
+        viewModelScope.launch {
+            _topAlbums.value = TopAlbumsState.Loading;
+
+            deezerRepository.getTopAlbums()
+                .onSuccess { albums ->
+                    Log.d("HomeViewModel", "Top de albumes recibido: ${albums.size}")
+                    _topAlbums.value = TopAlbumsState.Ready(albums);
+                }
+                .onFailure { e ->
+                    Log.e("HomeViewModel", "Fallo al traer el top de albumes", e)
+                    _topAlbums.value = TopAlbumsState.Error(
+                        e.message ?: "No se pudo cargar el top de álbumes"
                     );
                 }
         }
