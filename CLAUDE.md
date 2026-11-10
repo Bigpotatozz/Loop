@@ -168,6 +168,60 @@ io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1
 5. 🔄 Sistema de favoritos
 6. 🔄 Historial de reproducción
 7. 🔄 Playlists personalizadas
+8. ⏸️ **Selector de tema independiente del sistema** (aplazado 10 nov 2026)
+9. ⏸️ **Pestaña de usuario con estadísticas** (aplazado 10 nov 2026)
+
+### 8. Selector de tema — contexto ya investigado
+
+Motivo real: Oscar mantiene el sistema en claro por las notificaciones, pero quiere
+la app en oscuro. **Tres estados: Sistema (por defecto), Claro, Oscuro** — seguir al
+sistema se queda como comportamiento normal, el override es opcional.
+
+Lo que ya está listo: `OrbiMusicTheme` **ya recibe** `darkTheme: Boolean =
+isSystemInDarkTheme()` (`theme/Theme.kt`). Hoy nadie le pasa valor, así que cae en el
+default. El cambio es alimentar ese parámetro desde una preferencia guardada; no hay
+que tocar `DarkColorScheme` ni `LightColorScheme`.
+
+Lo que falta decidir o hacer:
+- **`HomeScreen` es un stub.** `Home.kt` completo es un `Text("Home screen")`. La
+  cabecera título/subtítulo que pide el diseño **no existe** ahí; hay que crearla.
+- **Un `Switch` no sirve**: son dos estados y hacen falta tres. Quedaron sobre la mesa
+  pastilla con chevron que abre menú (consistente con el selector de fuente de
+  `DownloadScreen`), icono que cicla, o segmentado de tres iconos. Sin decidir.
+- **Persistencia**: hay precedente de `SharedPreferences` en `DownloadMusicService`
+  (prefs `ytdl`). El estado tiene que leerse antes de la primera composición o se verá
+  un parpadeo con el tema equivocado.
+- El bloque título/subtítulo está **duplicado en cinco lugares** con los mismos valores
+  (`headlineSmall` bold, `letterSpacing` -0.5, `Spacer` 2.dp, `bodyMedium` 13.5.sp).
+  Si se escribe una sexta vez, considerar extraerlo a un composable compartido.
+
+### 9. Pestaña de usuario con estadísticas — contexto ya investigado
+
+La base de datos ya está lista para las stats y **ya se está llenando**:
+
+```kotlin
+@Entity(tableName = "play_history", ...)   // indices en songId y playedAt
+data class PlayHistoryEntity(
+    val songId: Long,
+    val playedAt: Long,
+    val msPlayed: Long,
+    val shuffle: Boolean,
+    val source: String   // biblioteca | favoritos | playlist:<id>
+)
+```
+
+`SongRepositoryImpl.kt:77` llama a `record()` en cada reproducción, así que hay datos
+acumulándose desde ya. `msPlayed` es el campo valioso: permite "horas escuchadas" en
+vez de un simple contador, y `source` dice si se escucha más desde playlists o desde
+la biblioteca.
+
+Lo que falta: **`PlayHistoryDao` solo tiene `record()`**, ni una query de lectura. Las
+stats son escribir esas consultas más la pantalla.
+
+Sin definir: qué significa "guardar la info del usuario". **En la app no existe ningún
+concepto de usuario** — ni entidad, ni tabla, ni cuentas; es local y offline. No es lo
+mismo un nombre y una foto en el dispositivo que una cuenta real con backend, y la
+diferencia cambia por completo el tamaño del trabajo.
 
 ## 🔧 Notas Técnicas de la Sesión
 
