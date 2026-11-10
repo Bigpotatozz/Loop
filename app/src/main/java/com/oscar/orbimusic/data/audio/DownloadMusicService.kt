@@ -66,7 +66,7 @@ class DownloadMusicService: Service() {
         // ID de la notificación
         private const val NOTIFICATION_ID = 2
         //Cuantos resultados se le piden a YouTube Music por busqueda
-        private const val SEARCH_RESULTS = 20
+        private const val SEARCH_RESULTS = 10
     }
 
     override fun onCreate() {
@@ -135,60 +135,64 @@ class DownloadMusicService: Service() {
     }
 
 
-    //Busca en YouTube y devuelve los resultados, sin descargar nada.
+    //Busca en YouTube Music y, si no devuelve nada, reintenta en YouTube normal.
     suspend fun searchOnYt(query: String): List<YtSearchResult> = withContext(Dispatchers.IO) {
 
         if (query.isBlank()) return@withContext emptyList()
 
-        try {
-            //Mismo candado que la descarga: sin init() yt-dlp lanza "instance not initialized"
-            if (!isInitialized.await()) {
-                throw Exception("YouTubeDL failed to initialize")
-            }
-    
-            val encoded = URLEncoder.encode(query, "UTF-8")
+        if (!isInitialized.await()) {
+            Log.e("DownloadService", "YouTubeDL no inicializado")
+            return@withContext emptyList()
+        }
 
-            val request = YoutubeDLRequest(
-                "https://music.youtube.com/search?q=$encoded#songs"
-            ).apply {
-                //--flat-playlist evita que yt-dlp extraiga cada video uno por uno.
-                //Sin esto serian 20 extracciones completas y la busqueda tardaria muchisimo.
+        val encoded = URLEncoder.encode(query, "UTF-8")
+
+        val results = executeSearch(
+            YoutubeDLRequest("https://music.youtube.com/search?q=$encoded#songs").apply {
                 addOption("--flat-playlist")
                 addOption("--dump-json")
                 addOption("--no-warnings")
-                //La URL no lleva el limite dentro como lo llevaba ytsearch20:
                 addOption("--playlist-end", SEARCH_RESULTS.toString())
-            }
+            },
+            source = "YouTube Music"
+        )
 
+        if (results.isNotEmpty()) return@withContext results
+
+        //Fallback a YouTube normal si YT Music no devolvio nada
+        Log.d("DownloadService", "Sin resultados en YT Music, reintentando en YouTube")
+        executeSearch(
+            YoutubeDLRequest("ytsearch${SEARCH_RESULTS}:$query").apply {
+                addOption("--flat-playlist")
+                addOption("--dump-json")
+                addOption("--no-warnings")
+            },
+            source = "YouTube"
+        )
+    }
+
+    private fun executeSearch(request: YoutubeDLRequest, source: String): List<YtSearchResult> {
+        return try {
             val result = YoutubeDL.getInstance().execute(request)
 
             if (result.exitCode != 0) {
-                Log.e("DownloadService", "Busqueda fallida (codigo ${result.exitCode}): ${result.err}")
-                return@withContext emptyList()
+                Log.w("DownloadService", "$source: búsqueda fallida (${result.exitCode})")
+                return emptyList()
             }
 
-            //TEMPORAL: imprime el primer resultado crudo para ver que campos
-            //manda de verdad la API. Quitar cuando ya no haga falta.
-            result.out.lineSequence()
-                .firstOrNull { it.trimStart().startsWith("{") }
-                ?.let { Log.d("DownloadService", "JSON CRUDO >>> $it") }
-
-            //--dump-json imprime un JSON por linea, no un array. Se filtran las
-            //lineas que no son JSON porque yt-dlp a veces escribe avisos en stdout.
             val results = result.out
                 .lineSequence()
                 .map { it.trim() }
                 .filter { it.startsWith("{") }
                 .mapNotNull { parseSearchResult(it) }
-
                 .distinctBy { it.id }
                 .toList()
 
-            Log.d("DownloadService", "Busqueda '$query': ${results.size} resultados")
+            Log.d("DownloadService", "$source: ${results.size} resultados")
             results
 
         } catch (e: Exception) {
-            Log.e("DownloadService", "Error buscando '$query'", e)
+            Log.w("DownloadService", "$source: error en búsqueda", e)
             emptyList()
         }
     }
@@ -267,18 +271,16 @@ class DownloadMusicService: Service() {
                 }
             }
 
-            //Eejcuta la descarga
-            Log.d("DownloadService", "Iniciando descarga con opciones de metadatos embebidos")
+            //Intento 1: URL original (YouTube Music).
+            //Intento 2: si falla, YouTube normal con el mismo video ID.
+            val ytUrl = "https://www.youtube.com/watch?v=$videoId"
             val result = try {
                 YoutubeDL.getInstance()
                     .execute(buildRequest(youtubeUrl, musicDir), null, false, onProgress)
             } catch (e: YoutubeDLException) {
-                //execute lanza excepcion cuando yt-dlp sale con codigo distinto
-                //de cero, no devuelve el exitCode. Por eso el reintento va aqui
-                //y no en un if sobre result.exitCode, que nunca se cumpliria.
-                Log.w("DownloadService", "Falló la descarga, reintentando sin caché", e)
+                Log.w("DownloadService", "Falló YT Music, reintentando con YouTube normal", e)
                 YoutubeDL.getInstance()
-                    .execute(buildRequest(youtubeUrl, musicDir, clearCache = true), null, false, onProgress)
+                    .execute(buildRequest(ytUrl, musicDir), null, false, onProgress)
             }
 
             if (result.exitCode == 0){
@@ -392,6 +394,7 @@ class DownloadMusicService: Service() {
     ): YoutubeDLRequest = YoutubeDLRequest(youtubeUrl).apply {
         if (clearCache) addOption("--rm-cache-dir")
 
+        addOption("--extractor-args", "youtube:player_client=android")
         addOption("-f", "bestaudio[ext=m4a]/best")
         addOption("-x")
         addOption("--audio-format", "m4a")
