@@ -6,9 +6,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -68,7 +70,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -720,22 +724,31 @@ private fun PlaylistDetailHeader(
 }
 
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PlaylistSummaryRow(
+private fun PlaylistSummaryCard(
     summary: PlaylistSummary,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
+    modifier: Modifier = Modifier
 ) {
     val isFavorites = summary.id == null
+    val haptics = LocalHapticFeedback.current
 
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .heightIn(min = 72.dp)
-            .clip(RoundedCornerShape(10.dp))
+    Column(
+        modifier
+            .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.primary)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick?.let { accion ->
+                    {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        accion()
+                    }
+                }
+            )
+            .padding(8.dp)
     ) {
         PlaylistCoverMosaic(
             coverPaths = summary.coverPaths,
@@ -745,35 +758,29 @@ private fun PlaylistSummaryRow(
             fallbackTint = if (isFavorites) FavoriteRed
             else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
-                .size(56.dp)
+                .fillMaxWidth()
+                .aspectRatio(1f)
                 .sharedPlaylistElement(playlistCoverKey(summary.id))
                 .clip(RoundedCornerShape(8.dp))
         )
 
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.height(8.dp))
 
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = summary.name,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = (-0.2).sp
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = if (summary.songCount == 1) "1 canción" else "${summary.songCount} canciones",
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Icon(
-            imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        Text(
+            text = summary.name,
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = (-0.2).sp
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = if (summary.songCount == 1) "1 canción" else "${summary.songCount} canciones",
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
         )
     }
 }
@@ -1056,23 +1063,31 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
                             NewPlaylistRow(onClick = { showCreateDialog = true })
                         }
 
-                        items(playlistSummaries, key = { it.id ?: -1L }) { summary ->
-                            SwipeToRemove(
-                                
-                                enabled = summary.id != null,
-                                label = "Eliminar",
-                                dismissOnSwipe = false,
-                                onRemove = { playlistToDelete = summary }
+                        items(
+                            playlistSummaries.chunked(2),
+                            key = { par -> par.first().id ?: -1L }
+                        ) { par ->
+                            Row(
+                                Modifier.padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
-                                PlaylistSummaryRow(
-                                    summary = summary,
-                                    onClick = {
-                                        mediaViewModel.openPlaylist(
-                                            if (summary.id == null) PlaylistSelection.Favorites
-                                            else PlaylistSelection.Real(summary.id)
-                                        )
-                                    }
-                                )
+                                par.forEach { summary ->
+                                    PlaylistSummaryCard(
+                                        summary = summary,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            mediaViewModel.openPlaylist(
+                                                if (summary.id == null) PlaylistSelection.Favorites
+                                                else PlaylistSelection.Real(summary.id)
+                                            )
+                                        },
+                                        //Favoritos (id null) se queda sin gesto
+                                        onLongClick = summary.id?.let {
+                                            { playlistToDelete = summary }
+                                        }
+                                    )
+                                }
+                                if (par.size == 1) Spacer(Modifier.weight(1f))
                             }
                         }
 
