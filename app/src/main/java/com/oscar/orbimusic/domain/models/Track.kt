@@ -10,5 +10,5 @@ class Track(
     val coverXl: String,
     val durationSeconds: Int? = null,
     val position: Int? = null,
-    val previewUrl: String? = null // URL de reproduccion de Deezer 
+    val previewUrl: String? = null // URL de reproduccion de Deezer
 )

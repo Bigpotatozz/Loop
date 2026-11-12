@@ -74,6 +74,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui-text-google-fonts:1.6.0")
     implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("androidx.palette:palette-ktx:1.0.0")
 
     //Reproduccion de audio
     implementation("androidx.media3:media3-exoplayer:1.1.1")

@@ -28,6 +28,12 @@ interface DeezerClient {
         @Query("limit") limit: Int = 10
     ): DeezerListDto<AlbumDto>
 
+    //El detalle de un artista. Se usa por nb_fan: chart/0/artists no lo trae.
+    @GET("artist/{id}")
+    suspend fun getArtist(
+        @Path("id") id: Long
+    ): ArtistDto
+
     //El album completo con sus canciones en "tracks". Ojo: si el id no existe
     //Deezer responde 200 con {"error":{...}}, asi que llega un AlbumDto vacio.
     @GET("album/{id}")

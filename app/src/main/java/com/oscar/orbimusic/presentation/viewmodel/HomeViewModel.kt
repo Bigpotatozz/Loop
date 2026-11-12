@@ -33,7 +33,7 @@ class HomeViewModel(
         viewModelScope.launch {
             _trending.value = TrendingState.Loading;
 
-            deezerRepository.getTrendingArtists()
+            deezerRepository.getTrendingArtists(limit = 10)
                 .onSuccess { artists ->
                     Log.d("HomeViewModel", "Tendencias recibidas: ${artists.size}")
                     artists.forEach {

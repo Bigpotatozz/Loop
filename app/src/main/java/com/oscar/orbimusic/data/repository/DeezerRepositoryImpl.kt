@@ -10,7 +10,21 @@ import com.oscar.orbimusic.domain.models.AlbumDetail
 import com.oscar.orbimusic.domain.models.Artist
 import com.oscar.orbimusic.domain.models.Track
 import com.oscar.orbimusic.domain.repository.DeezerRepository
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlin.coroutines.cancellation.CancellationException
+
+//Artist no es data class, asi que no tiene copy()
+private fun Artist.withFanCount(fans: Int?): Artist = Artist(
+    id = id,
+    name = name,
+    pictureMedium = pictureMedium,
+    pictureXl = pictureXl,
+    fanCount = fans ?: fanCount,
+    albumCount = albumCount,
+    position = position
+)
 
 class DeezerRepositoryImpl(
     private val deezerClient: DeezerClient
@@ -19,10 +33,27 @@ class DeezerRepositoryImpl(
     override suspend fun getTrendingArtists(limit: Int): Result<List<Artist>> {
         return try {
             val response = deezerClient.getTrendingArtists(limit)
-            Result.success(
-                //Aqui es donde se manda a llamar la funcion privada de debajo
-                response.data.orEmpty().mapNotNull { it.toDomainModel() }
-            )
+            //Aqui es donde se manda a llamar la funcion privada de debajo
+            val artists = response.data.orEmpty().mapNotNull { it.toDomainModel() }
+
+            //El chart no trae nb_fan, solo artist/{id}. Se piden todos en paralelo 
+            val withFans = coroutineScope {
+                artists.map { artist ->
+                    async {
+                        val fans = try {
+                            deezerClient.getArtist(artist.id).nbFan
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Log.w("DeezerRepository", "Sin fans para ${artist.name}", e)
+                            null
+                        }
+                        artist.withFanCount(fans)
+                    }
+                }.awaitAll()
+            }
+
+            Result.success(withFans)
 
         } catch (e: CancellationException) {
             throw e
