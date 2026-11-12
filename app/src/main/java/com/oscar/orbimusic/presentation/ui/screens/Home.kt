@@ -1,5 +1,6 @@
 package com.oscar.orbimusic.presentation.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,7 +49,7 @@ private fun greetingForHour(hour: Int): String = when (hour) {
 }
 
 @Composable
-fun HomeScreen(homeViewModel: HomeViewModel){
+fun HomeScreen(homeViewModel: HomeViewModel, onAlbumClick: (Long) -> Unit){
 
     val topAlbums by homeViewModel.topAlbums.collectAsState()
 
@@ -111,7 +112,8 @@ fun HomeScreen(homeViewModel: HomeViewModel){
                         CarouselCard(
                             coverUrl = album.coverXl,
                             title = album.title,
-                            subtitle = album.artistName
+                            subtitle = album.artistName,
+                            onClick = { onAlbumClick(album.id) }
                         )
                     }
                 }
@@ -124,8 +126,13 @@ fun HomeScreen(homeViewModel: HomeViewModel){
 
 //Caratula grande con el titulo y un subtitulo debajo.
 @Composable
-private fun CarouselCard(coverUrl: String, title: String, subtitle: String) {
-    Column(Modifier.width(CARD_SIZE)) {
+private fun CarouselCard(coverUrl: String, title: String, subtitle: String, onClick: () -> Unit) {
+    Column(
+        Modifier
+            .width(CARD_SIZE)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+    ) {
 
         AsyncImage(
             model = coverUrl,

@@ -6,6 +6,7 @@ import com.oscar.orbimusic.data.network.dto.DeezerListDto
 import com.oscar.orbimusic.data.network.dto.TrackDto
 import okhttp3.Response
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface DeezerClient {
@@ -26,5 +27,12 @@ interface DeezerClient {
     suspend fun getTopAlbums(
         @Query("limit") limit: Int = 10
     ): DeezerListDto<AlbumDto>
+
+    //El album completo con sus canciones en "tracks". Ojo: si el id no existe
+    //Deezer responde 200 con {"error":{...}}, asi que llega un AlbumDto vacio.
+    @GET("album/{id}")
+    suspend fun getAlbum(
+        @Path("id") id: Long
+    ): AlbumDto
 
 }

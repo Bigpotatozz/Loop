@@ -46,6 +46,10 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.oscar.orbimusic.presentation.ui.screens.AlbumScreen
+import com.oscar.orbimusic.presentation.viewmodel.AlbumScreenViewModel
 import com.oscar.orbimusic.presentation.ui.screens.HomeScreen
 import com.oscar.orbimusic.presentation.ui.screens.MediaScreen
 import com.oscar.orbimusic.presentation.ui.theme.OrbiMusicTheme
@@ -208,7 +212,25 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaVi
     NavHost(hostController, "home", modifier){
 
         composable("home"){
-            HomeScreen(homeViewModel)
+            HomeScreen(homeViewModel, onAlbumClick = { id ->
+                hostController.navigate("album/$id")
+            })
+        }
+
+        composable(
+            "album/{albumId}",
+            arguments = listOf(navArgument("albumId") { type = NavType.LongType })
+        ){ entry ->
+
+            val albumViewModel = ViewModelProvider(
+                entry, AppModule.albumViewModelFactory
+            )[AlbumScreenViewModel::class.java]
+
+            AlbumScreen(
+                albumId = entry.arguments?.getLong("albumId") ?: 0L,
+                albumViewModel = albumViewModel,
+                onBack = { hostController.popBackStack() }
+            )
         }
 
         composable("media"){

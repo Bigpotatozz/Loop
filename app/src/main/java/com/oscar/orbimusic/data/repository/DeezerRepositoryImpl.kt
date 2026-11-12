@@ -6,6 +6,7 @@ import com.oscar.orbimusic.data.network.dto.AlbumDto
 import com.oscar.orbimusic.data.network.dto.ArtistDto
 import com.oscar.orbimusic.data.network.dto.TrackDto
 import com.oscar.orbimusic.domain.models.Album
+import com.oscar.orbimusic.domain.models.AlbumDetail
 import com.oscar.orbimusic.domain.models.Artist
 import com.oscar.orbimusic.domain.models.Track
 import com.oscar.orbimusic.domain.repository.DeezerRepository
@@ -57,6 +58,23 @@ class DeezerRepositoryImpl(
             throw e
         } catch (e: Exception) {
             Log.e("DeezerRepository", "Fallo al traer el top de albumes", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getAlbum(id: Long): Result<AlbumDetail> {
+        return try {
+            val response = deezerClient.getAlbum(id)
+            //Null = Deezer contesto {"error":...} o falto algo indispensable
+            val album = response.toAlbumDetail()
+                
+                ?: return Result.failure(IllegalStateException("Álbum no encontrado"))
+            Result.success(album)
+
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e("DeezerRepository", "Fallo al traer el album $id", e)
             Result.failure(e)
         }
     }
@@ -118,6 +136,57 @@ private fun AlbumDto.toDomainModel(): Album? {
         artistName = safeArtist,
         coverMedium = medium,
         coverXl = xl,
+        position = position
+    )
+}
+
+
+//Mismas guardas que el de arriba, pero con las canciones adentro.
+private fun AlbumDto.toAlbumDetail(): AlbumDetail? {
+    val safeId = id ?: return null
+    val safeTitle = title?.takeIf { it.isNotBlank() } ?: return null
+    val safeArtist = artist?.name?.takeIf { it.isNotBlank() } ?: return null
+    val xl = coverXl ?: coverMedium ?: return null
+    val medium = coverMedium ?: coverXl ?: return null
+
+    return AlbumDetail(
+        id = safeId,
+        title = safeTitle,
+        artistName = safeArtist,
+        coverXl = xl,
+        releaseDate = releaseDate,
+        recordType = recordType,
+        durationSeconds = duration,
+        tracks = tracks?.data.orEmpty().mapIndexedNotNull { index, track ->
+            track.toAlbumTrack(
+                albumArtist = safeArtist,
+                coverMedium = medium,
+                coverXl = xl,
+                position = index + 1
+            )
+        }
+    )
+}
+
+
+//Dentro de album/{id} las canciones no traen "album", asi que la caratula se
+//hereda del album. El artista si viene, pero si faltara se usa el del album.
+private fun TrackDto.toAlbumTrack(
+    albumArtist: String,
+    coverMedium: String,
+    coverXl: String,
+    position: Int
+): Track? {
+    val safeId = id ?: return null
+    val safeTitle = title?.takeIf { it.isNotBlank() } ?: return null
+
+    return Track(
+        id = safeId,
+        title = safeTitle,
+        artistName = artist?.name?.takeIf { it.isNotBlank() } ?: albumArtist,
+        coverMedium = coverMedium,
+        coverXl = coverXl,
+        durationSeconds = duration,
         position = position
     )
 }
