@@ -116,7 +116,8 @@ private fun TrackDto.toDomainModel(): Track? {
         coverMedium = medium,
         coverXl = xl,
         durationSeconds = duration,
-        position = position
+        position = position,
+        previewUrl = preview?.takeIf { it.startsWith("http") }
     )
 }
 
@@ -187,6 +188,7 @@ private fun TrackDto.toAlbumTrack(
         coverMedium = coverMedium,
         coverXl = coverXl,
         durationSeconds = duration,
-        position = position
+        position = position,
+        previewUrl = preview?.takeIf { it.startsWith("http") }
     )
 }

@@ -74,7 +74,8 @@ object AppModule {
     //Se crea por pantalla (owner = NavBackStackEntry), no por Activity: cada
     //album abierto tiene su propio estado y se libera al hacer pop
     val albumViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
-        initializer { AlbumScreenViewModel(deezerRepository) }
+        //Context para el ExoPlayer del preview de 30s
+        initializer { AlbumScreenViewModel(deezerRepository, context) }
     }
 
     private val deezerApi: DeezerClient by lazy {

@@ -54,6 +54,9 @@ import com.oscar.orbimusic.presentation.ui.components.DownloadStateButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.foundation.background
+import com.oscar.orbimusic.presentation.ui.components.EqualizerAnimation
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 
@@ -64,11 +67,31 @@ fun AlbumScreen(
     albumId: Long,
     albumViewModel: AlbumScreenViewModel,
     downloadViewModel: DownloadViewModel,
+    //Si la musica de la biblioteca esta sonando, para pausarla al lanzar un
+    //preview: el player principal no maneja audio focus y sonarian los dos
+    isMainPlaying: Boolean,
+    onPauseMain: () -> Unit,
     onBack: () -> Unit
 ) {
     LaunchedEffect(albumId) { albumViewModel.load(albumId) }
 
     val state by albumViewModel.album.collectAsState()
+
+    val previewTrackId by albumViewModel.previewTrackId.collectAsState()
+    val isPreviewLoading by albumViewModel.isPreviewLoading.collectAsState()
+    val previewError by albumViewModel.previewError.collectAsState()
+
+    //Al revés: si la biblioteca vuelve a sonar (mini player, notificacion),
+    //el preview se calla
+    LaunchedEffect(isMainPlaying) {
+        if (isMainPlaying) albumViewModel.stopPreview()
+    }
+
+    //Al salir de la pantalla (atras o cambiar de pestaña) el preview se
+    //detiene. El ViewModel puede seguir vivo en el back stack, el sonido no.
+    DisposableEffect(Unit) {
+        onDispose { albumViewModel.stopPreview() }
+    }
 
     val isDownloading by downloadViewModel.isDownloading.collectAsState()
     val downloadingId by downloadViewModel.downloadingId.collectAsState()
@@ -84,6 +107,13 @@ fun AlbumScreen(
         downloadError?.let { message ->
             snackbarHostState.showSnackbar(message)
             downloadViewModel.clearDownloadError()
+        }
+    }
+
+    LaunchedEffect(previewError) {
+        previewError?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            albumViewModel.clearPreviewError()
         }
     }
 
@@ -164,6 +194,16 @@ fun AlbumScreen(
                         //Solo se muestra el artista si difiere del del album
                         //(colaboraciones); si no, repetirlo en cada fila es ruido
                         showArtist = track.artistName != album.artistName,
+                        isPreviewing = previewTrackId == track.id,
+                        isPreviewLoading = previewTrackId == track.id && isPreviewLoading,
+                        //Sin preview la fila no se puede tocar (pasa con
+                        //algunas canciones con restriccion de pais)
+                        onPreview = track.previewUrl?.let {
+                            {
+                                if (isMainPlaying) onPauseMain()
+                                albumViewModel.togglePreview(track.id)
+                            }
+                        },
                         downloadState = rowState,
                         //Una descarga a la vez, igual que en la busqueda
                         downloadEnabled = !isDownloading,
@@ -308,6 +348,9 @@ private fun albumSummary(album: AlbumDetail): String {
 private fun AlbumTrackRow(
     track: Track,
     showArtist: Boolean,
+    isPreviewing: Boolean,
+    isPreviewLoading: Boolean,
+    onPreview: (() -> Unit)?,
     downloadState: DownloadRowState,
     downloadEnabled: Boolean,
     onDownload: () -> Unit,
@@ -317,18 +360,37 @@ private fun AlbumTrackRow(
         modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
+            .clip(RoundedCornerShape(10.dp))
+            //Mismo resaltado que la cancion que suena en MediaSongCard
+            .background(
+                if (isPreviewing) MaterialTheme.colorScheme.surfaceVariant
+                else Color.Transparent
+            )
+            .clickable(enabled = onPreview != null, onClick = { onPreview?.invoke() })
             //Menos a la derecha: el boton ya trae su propio aire de 48.dp
             .padding(start = 10.dp, end = 0.dp, top = 5.dp, bottom = 5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        //Ancho fijo para que los titulos queden alineados con 1 o 2 digitos
-        Text(
-            text = (track.position ?: 0).toString(),
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.width(28.dp)
-        )
+        //Ancho fijo para que los titulos queden alineados con 1 o 2 digitos y
+        //no se muevan al cambiar el numero por el spinner o el ecualizador
+        Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
+            when {
+                isPreviewLoading -> CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+
+                isPreviewing -> EqualizerAnimation(isPlaying = true)
+
+                else -> Text(
+                    text = (track.position ?: 0).toString(),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
 
         Spacer(Modifier.width(12.dp))
 

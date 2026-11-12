@@ -225,11 +225,14 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaVi
             val albumViewModel = ViewModelProvider(
                 entry, AppModule.albumViewModelFactory
             )[AlbumScreenViewModel::class.java]
+            val mainPlayerState by mediaViewModel.playerState.collectAsState()
 
             AlbumScreen(
                 albumId = entry.arguments?.getLong("albumId") ?: 0L,
                 albumViewModel = albumViewModel,
                 downloadViewModel = downloadViewModel,
+                isMainPlaying = mainPlayerState.isPlaying,
+                onPauseMain = { mediaViewModel.pauseSong() },
                 onBack = { hostController.popBackStack() }
             )
         }
