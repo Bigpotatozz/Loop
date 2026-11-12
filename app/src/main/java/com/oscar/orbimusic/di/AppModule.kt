@@ -13,6 +13,7 @@ import com.oscar.orbimusic.data.local.database.dao.PlaylistDao
 import com.oscar.orbimusic.data.local.database.dao.SongDao
 import com.oscar.orbimusic.data.local.database.SongDatabase
 import com.oscar.orbimusic.data.network.DeezerClient
+import com.oscar.orbimusic.data.preferences.ThemePreferences
 import com.oscar.orbimusic.data.repository.DeezerRepositoryImpl
 import com.oscar.orbimusic.data.repository.SongRepositoryImpl
 import com.oscar.orbimusic.domain.repository.DeezerRepository
@@ -51,6 +52,11 @@ object AppModule {
         SongRepositoryImpl(songDao, favoritesDao, playlistDao, playHistoryDao);
     };
 
+
+    //Una sola instancia: la Activity lo lee para el tema y el Home lo cambia
+    val themePreferences: ThemePreferences by lazy {
+        ThemePreferences(context);
+    };
 
     suspend fun scanMusicFiles(context: Context){
         val fileScanner = FileScanner(context, songDao);

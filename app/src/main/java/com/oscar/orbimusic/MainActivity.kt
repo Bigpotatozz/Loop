@@ -115,31 +115,35 @@ class MainActivity : ComponentActivity() {
             ))
         }
         
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(
-                android.graphics.Color.TRANSPARENT,
-                android.graphics.Color.TRANSPARENT
-            ),
-            navigationBarStyle = SystemBarStyle.auto(
-                android.graphics.Color.parseColor("#D9D9D9"), // terciario claro
-                android.graphics.Color.parseColor("#1C1C1E")  // terciario oscuro
-            )
-        )
+        //Antes de setContent para que el primer frame ya salga edge-to-edge y
+        //con el tema correcto. Mismo calculo que dentro de setContent.
+        val systemDark = (resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+        applySystemBarStyle(AppModule.themePreferences.darkTheme.value ?: systemDark)
+
         setContent {
             val navController = rememberNavController();
             val isExpanded by mediaViewModel.isExpanded.collectAsState()
             val playerState by mediaViewModel.playerState.collectAsState()
 
+            //Tema de la aplicacion
+            val themeOverride by AppModule.themePreferences.darkTheme.collectAsState()
+            val darkTheme = themeOverride ?: isSystemInDarkTheme()
+
             // Es la view o variable que almacena toda la activity
             val view = LocalView.current
-            val darkTheme = isSystemInDarkTheme()
             LaunchedEffect(isExpanded, darkTheme) {
+                applySystemBarStyle(darkTheme)
+
+                //Despues de enableEdgeToEdge, que tambien toca la apariencia:
+                //con el reproductor expandido la barra de estado va clara
                 val controller = WindowCompat.getInsetsController(window, view)
                 controller.isAppearanceLightStatusBars = !isExpanded && !darkTheme
                 controller.isAppearanceLightNavigationBars = !darkTheme
             }
 
-            OrbiMusicTheme {
+            OrbiMusicTheme(darkTheme = darkTheme) {
 
 
                 //Es una caja que me da herramientas para animacion y las ejecuta
@@ -169,7 +173,9 @@ class MainActivity : ComponentActivity() {
                                             hostController = navController,
                                             mediaViewModel,
                                             downloadViewModel,
-                                            homeViewModel)
+                                            homeViewModel,
+                                            isDarkTheme = darkTheme,
+                                            onDarkThemeChange = { AppModule.themePreferences.setDarkTheme(it) })
                                     }
 
                                 }
@@ -198,6 +204,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    //Antes se usaba SystemBarStyle.auto, que decide por el tema del
+    //dispositivo. Con el tema propio de la app hay que decirle explicitamente
+    private fun applySystemBarStyle(darkTheme: Boolean) {
+        val transparent = android.graphics.Color.TRANSPARENT
+        val navLight = android.graphics.Color.parseColor("#D9D9D9") // terciario claro
+        val navDark = android.graphics.Color.parseColor("#1C1C1E")  // terciario oscuro
+
+        enableEdgeToEdge(
+            statusBarStyle = if (darkTheme) SystemBarStyle.dark(transparent)
+            else SystemBarStyle.light(transparent, transparent),
+            navigationBarStyle = if (darkTheme) SystemBarStyle.dark(navDark)
+            else SystemBarStyle.light(navLight, navDark)
+        )
+    }
+
     private fun scanMusicFiles(){
         lifecycleScope.launch {
             AppModule.scanMusicFiles(this@MainActivity);
@@ -207,14 +228,17 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(UnstableApi::class)
 @Composable
-fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaViewModel: MediaViewModel, downloadViewModel: DownloadViewModel, homeViewModel: HomeViewModel){
+fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaViewModel: MediaViewModel, downloadViewModel: DownloadViewModel, homeViewModel: HomeViewModel, isDarkTheme: Boolean, onDarkThemeChange: (Boolean) -> Unit){
 
     NavHost(hostController, "home", modifier){
 
         composable("home"){
-            HomeScreen(homeViewModel, onAlbumClick = { id ->
-                hostController.navigate("album/$id")
-            })
+            HomeScreen(
+                homeViewModel,
+                isDarkTheme = isDarkTheme,
+                onDarkThemeChange = onDarkThemeChange,
+                onAlbumClick = { id -> hostController.navigate("album/$id") }
+            )
         }
 
         composable(

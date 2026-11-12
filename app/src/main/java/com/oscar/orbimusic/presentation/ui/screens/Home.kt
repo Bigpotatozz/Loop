@@ -43,6 +43,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import java.util.Calendar
 import java.util.Locale
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -75,7 +82,12 @@ private fun greetingForHour(hour: Int): String = when (hour) {
 }
 
 @Composable
-fun HomeScreen(homeViewModel: HomeViewModel, onAlbumClick: (Long) -> Unit){
+fun HomeScreen(
+    homeViewModel: HomeViewModel,
+    isDarkTheme: Boolean,
+    onDarkThemeChange: (Boolean) -> Unit,
+    onAlbumClick: (Long) -> Unit
+){
 
     val topAlbums by homeViewModel.topAlbums.collectAsState()
     val trending by homeViewModel.trending.collectAsState()
@@ -87,14 +99,23 @@ fun HomeScreen(homeViewModel: HomeViewModel, onAlbumClick: (Long) -> Unit){
     ) {
 
         val saludo = remember { greetingForHour(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) }
-        Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp, bottom = 20.dp)) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 22.dp, end = 22.dp, top = 20.dp, bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
                 text = saludo,
-                style = MaterialTheme.typography.headlineMedium.copy(
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = 25.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.5).sp
+                    letterSpacing = (-0.2).sp
                 )
             )
+
+            ThemeSwitch(isDarkTheme = isDarkTheme, onDarkThemeChange = onDarkThemeChange)
         }
 
 
@@ -183,6 +204,32 @@ fun HomeScreen(homeViewModel: HomeViewModel, onAlbumClick: (Long) -> Unit){
 
         Spacer(Modifier.height(16.dp))
     }
+}
+
+//Switch del tema de la app.
+@Composable
+private fun ThemeSwitch(isDarkTheme: Boolean, onDarkThemeChange: (Boolean) -> Unit) {
+    Switch(
+        checked = isDarkTheme,
+        onCheckedChange = onDarkThemeChange,
+        thumbContent = {
+            Icon(
+                imageVector = if (isDarkTheme) Icons.Rounded.DarkMode else Icons.Rounded.LightMode,
+                contentDescription = if (isDarkTheme) "Cambiar a modo claro"
+                else "Cambiar a modo oscuro",
+                modifier = Modifier.size(SwitchDefaults.IconSize)
+            )
+        },
+        colors = SwitchDefaults.colors(
+            checkedThumbColor = MaterialTheme.colorScheme.primary,
+            checkedIconColor = MaterialTheme.colorScheme.secondary,
+            checkedTrackColor = MaterialTheme.colorScheme.secondary,
+            uncheckedThumbColor = MaterialTheme.colorScheme.secondary,
+            uncheckedIconColor = MaterialTheme.colorScheme.primary,
+            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+            uncheckedBorderColor = MaterialTheme.colorScheme.outline
+        )
+    )
 }
 
 @Composable
