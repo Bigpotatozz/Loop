@@ -71,6 +71,15 @@ class DownloadViewModel(private val context: Context): ViewModel() {
     //El ultimo texto buscado.
     private var lastQuery: String = "";
 
+    //Las descargas que vienen de Deezer no se identifican por el id de YouTube
+    //sino por una clave de la fila ("deezer:<id>"): el id de YouTube no se
+    //conoce hasta que termina la busqueda. El servicio reporta con el id de
+    //YouTube, asi que aqui se traduce de vuelta. Concurrent porque el callback
+    //llega desde el hilo del servicio.
+    private val rowKeyByVideoId = java.util.concurrent.ConcurrentHashMap<String, String>();
+
+    private fun rowKeyFor(videoId: String): String = rowKeyByVideoId[videoId] ?: videoId;
+
     //Cuando se construye la opantalla se conecta automaticamente al servicio de descargas
     init {
         connectToDownloadService();
@@ -86,6 +95,7 @@ class DownloadViewModel(private val context: Context): ViewModel() {
                 when {
                     progress.error != null -> {
                         _downloadError.value = progress.error
+                        rowKeyByVideoId.remove(progress.videoId)
                         _downloadingId.value = null
                         _isDownloading.value = false
                     }
@@ -95,7 +105,8 @@ class DownloadViewModel(private val context: Context): ViewModel() {
                         //llegue a 100: yt-dlp se queda en 99 durante FFmpeg y
                         //nunca reporta el 100
                         _completedDownloads.value =
-                            _completedDownloads.value + progress.videoId
+                            _completedDownloads.value + rowKeyFor(progress.videoId)
+                        rowKeyByVideoId.remove(progress.videoId)
                         _downloadingId.value = null
                         _isDownloading.value = false
 
@@ -105,7 +116,7 @@ class DownloadViewModel(private val context: Context): ViewModel() {
                     }
 
                     else -> {
-                        _downloadingId.value = progress.videoId
+                        _downloadingId.value = rowKeyFor(progress.videoId)
                         _downloadProgress.value = progress.progress
                         _isDownloading.value = true
                     }
@@ -203,6 +214,50 @@ class DownloadViewModel(private val context: Context): ViewModel() {
         _isDownloading.value = true;
 
         service.downloadFromYt(videoId, url, title);
+    }
+
+    //Clave de fila para una cancion de Deezer. La pantalla la usa para comparar
+    //contra downloadingId y completedDownloads.
+    fun deezerRowKey(trackId: Long): String = "deezer:$trackId";
+
+    //Descarga una cancion de Deezer: primero la busca en YouTube Music por
+    //"artista titulo" y baja el primer resultado. Si YT Music viene vacio,
+    //searchOnYt ya cae a YouTube normal y se usa ese resultado.
+    fun downloadDeezerTrack(trackId: Long, artist: String, title: String){
+        val service = downloadService ?: return;
+        if (_isDownloading.value) return;
+
+        val rowKey = deezerRowKey(trackId);
+
+        //Spinner desde ya: la busqueda tarda unos segundos antes de que el
+        //servicio reporte cualquier progreso
+        _downloadingId.value = rowKey;
+        _downloadProgress.value = -1;
+        _isDownloading.value = true;
+
+        viewModelScope.launch {
+            val outcome = service.searchOnYt("$artist $title", SearchSource.YT_MUSIC);
+            val match = outcome.results.firstOrNull();
+
+            if (match == null) {
+                _downloadError.value = "No se encontró \"$title\" en YouTube";
+                _downloadingId.value = null;
+                _isDownloading.value = false;
+                return@launch;
+            }
+
+            //fallbackFrom != null = el resultado viene de YouTube normal, se usa
+            //su url tal cual. Si no, se arma la de YouTube Music con el id.
+            val url = if (outcome.fallbackFrom == null) {
+                "https://music.youtube.com/watch?v=${match.id}"
+            } else {
+                match.url
+            };
+
+            Log.d("DOWNLOADVIEWMODEL", "Deezer $trackId -> ${match.id} ($url)");
+            rowKeyByVideoId[match.id] = rowKey;
+            service.downloadFromYt(match.id, url, title);
+        }
     }
 
 

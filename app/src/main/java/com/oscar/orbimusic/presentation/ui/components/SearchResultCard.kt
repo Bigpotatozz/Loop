@@ -93,49 +93,68 @@ fun SearchResultCard(
 
         Spacer(Modifier.width(8.dp))
 
-        //Tamaño fijo para que la fila no se mueva al cambiar de estado,
-        //igual que el Box de ancho fijo de MediaSongCard
-        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-            //secondary es la tinta de alto contraste en este tema;
-            //primary es el color de fondo, no un acento
-            val accent = MaterialTheme.colorScheme.secondary
+        DownloadStateButton(
+            state = state,
+            title = result.title,
+            enabled = downloadEnabled,
+            onDownload = onDownload
+        )
+    }
+}
 
-            when (state) {
-                DownloadRowState.Idle -> {
-                    IconButton(onClick = onDownload, enabled = downloadEnabled) {
-                        Icon(
-                            imageVector = Icons.Rounded.Download,
-                            contentDescription = "Descargar ${result.title}",
-                            tint = if (downloadEnabled) accent
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
 
-                DownloadRowState.Starting -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp,
-                        color = accent
-                    )
-                }
+//El boton de descarga con sus cuatro estados. Publico porque lo comparten la
+//busqueda y el detalle de album.
+@Composable
+fun DownloadStateButton(
+    state: DownloadRowState,
+    title: String,
+    enabled: Boolean,
+    onDownload: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    //Tamaño fijo para que la fila no se mueva al cambiar de estado,
+    //igual que el Box de ancho fijo de MediaSongCard
+    Box(modifier.size(48.dp), contentAlignment = Alignment.Center) {
+        //secondary es la tinta de alto contraste en este tema;
+        //primary es el color de fondo, no un acento
+        val accent = MaterialTheme.colorScheme.secondary
 
-                is DownloadRowState.Running -> {
-                    CircularProgressIndicator(
-                        progress = { state.percent / 100f },
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp,
-                        color = accent
-                    )
-                }
-
-                DownloadRowState.Done -> {
+        when (state) {
+            DownloadRowState.Idle -> {
+                IconButton(onClick = onDownload, enabled = enabled) {
                     Icon(
-                        imageVector = Icons.Rounded.Check,
-                        contentDescription = "Descargada",
-                        tint = accent
+                        imageVector = Icons.Rounded.Download,
+                        contentDescription = "Descargar $title",
+                        tint = if (enabled) accent
+                        else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+
+            DownloadRowState.Starting -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp,
+                    color = accent
+                )
+            }
+
+            is DownloadRowState.Running -> {
+                CircularProgressIndicator(
+                    progress = { state.percent / 100f },
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp,
+                    color = accent
+                )
+            }
+
+            DownloadRowState.Done -> {
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = "Descargada",
+                    tint = accent
+                )
             }
         }
     }

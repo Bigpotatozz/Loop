@@ -48,17 +48,46 @@ import com.oscar.orbimusic.presentation.models.AlbumState
 import com.oscar.orbimusic.presentation.utils.parseTime
 import com.oscar.orbimusic.presentation.utils.parseTotalTime
 import com.oscar.orbimusic.presentation.viewmodel.AlbumScreenViewModel
+import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
+import com.oscar.orbimusic.presentation.ui.components.DownloadRowState
+import com.oscar.orbimusic.presentation.ui.components.DownloadStateButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.remember
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 
+//DownloadViewModel esta marcado @UnstableApi, igual que en DownloadScreen
+@OptIn(UnstableApi::class)
 @Composable
 fun AlbumScreen(
     albumId: Long,
     albumViewModel: AlbumScreenViewModel,
+    downloadViewModel: DownloadViewModel,
     onBack: () -> Unit
 ) {
     LaunchedEffect(albumId) { albumViewModel.load(albumId) }
 
     val state by albumViewModel.album.collectAsState()
 
+    val isDownloading by downloadViewModel.isDownloading.collectAsState()
+    val downloadingId by downloadViewModel.downloadingId.collectAsState()
+    val downloadProgress by downloadViewModel.downloadProgress.collectAsState()
+    val completedDownloads by downloadViewModel.completedDownloads.collectAsState()
+    val downloadError by downloadViewModel.downloadError.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    //Mismo manejo que DownloadScreen: se muestra y se limpia para que no
+    //vuelva a salir en la siguiente recomposicion
+    LaunchedEffect(downloadError) {
+        downloadError?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            downloadViewModel.clearDownloadError()
+        }
+    }
+
+    Box(Modifier.fillMaxSize()) {
     when (val current = state) {
         AlbumState.Loading -> {
             Box(Modifier.fillMaxSize()) {
@@ -119,16 +148,43 @@ fun AlbumScreen(
                 }
 
                 items(album.tracks, key = { it.id }) { track ->
+                    val rowKey = downloadViewModel.deezerRowKey(track.id)
+
+                    //Misma logica que las filas de DownloadScreen: un solo
+                    //progreso, downloadingId dice a que fila le toca
+                    val rowState = when {
+                        rowKey in completedDownloads -> DownloadRowState.Done
+                        rowKey != downloadingId -> DownloadRowState.Idle
+                        downloadProgress < 0 -> DownloadRowState.Starting
+                        else -> DownloadRowState.Running(downloadProgress)
+                    }
+
                     AlbumTrackRow(
                         track = track,
                         //Solo se muestra el artista si difiere del del album
                         //(colaboraciones); si no, repetirlo en cada fila es ruido
                         showArtist = track.artistName != album.artistName,
+                        downloadState = rowState,
+                        //Una descarga a la vez, igual que en la busqueda
+                        downloadEnabled = !isDownloading,
+                        onDownload = {
+                            downloadViewModel.downloadDeezerTrack(
+                                trackId = track.id,
+                                artist = track.artistName,
+                                title = track.title
+                            )
+                        },
                         modifier = Modifier.padding(horizontal = 12.dp)
                     )
                 }
             }
         }
+    }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -252,13 +308,17 @@ private fun albumSummary(album: AlbumDetail): String {
 private fun AlbumTrackRow(
     track: Track,
     showArtist: Boolean,
+    downloadState: DownloadRowState,
+    downloadEnabled: Boolean,
+    onDownload: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-            .padding(horizontal = 10.dp, vertical = 5.dp),
+            //Menos a la derecha: el boton ya trae su propio aire de 48.dp
+            .padding(start = 10.dp, end = 0.dp, top = 5.dp, bottom = 5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         //Ancho fijo para que los titulos queden alineados con 1 o 2 digitos
@@ -305,5 +365,14 @@ private fun AlbumTrackRow(
                 maxLines = 1
             )
         }
+
+        Spacer(Modifier.width(4.dp))
+
+        DownloadStateButton(
+            state = downloadState,
+            title = track.title,
+            enabled = downloadEnabled,
+            onDownload = onDownload
+        )
     }
 }

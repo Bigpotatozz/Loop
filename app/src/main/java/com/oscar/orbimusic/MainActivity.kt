@@ -229,6 +229,7 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaVi
             AlbumScreen(
                 albumId = entry.arguments?.getLong("albumId") ?: 0L,
                 albumViewModel = albumViewModel,
+                downloadViewModel = downloadViewModel,
                 onBack = { hostController.popBackStack() }
             )
         }
