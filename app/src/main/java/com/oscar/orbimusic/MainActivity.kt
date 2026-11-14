@@ -59,6 +59,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -234,6 +235,7 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaVi
 
         composable("home"){
             val mainPlayerState by mediaViewModel.playerState.collectAsState()
+            val playlists by mediaViewModel.playlistSummaries.collectAsState()
 
             HomeScreen(
                 homeViewModel,
@@ -242,7 +244,16 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaVi
                 onDarkThemeChange = onDarkThemeChange,
                 onAlbumClick = { id -> hostController.navigate("album/$id") },
                 isMainPlaying = mainPlayerState.isPlaying,
-                onPauseMain = { mediaViewModel.pauseSong() }
+                onPauseMain = { mediaViewModel.pauseSong() },
+                playlists = playlists,
+                onOpenPlaylist = { selection ->
+                    mediaViewModel.requestOpenPlaylist(selection)
+                    hostController.navigate("media")
+                },
+                onCreatePlaylist = {
+                    mediaViewModel.requestCreatePlaylist()
+                    hostController.navigate("media")
+                }
             )
         }
 
@@ -284,9 +295,11 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaVi
 
 @Composable
 fun Navbar(navController: NavController){
-    var selectedItem by rememberSaveable{ mutableStateOf(0) }
-
     val items = listOf("Home", "Media", "Search");
+
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+    val selectedItem = items.indexOfFirst { it.lowercase() == currentRoute }
     val selectedIcons = listOf(Icons.Rounded.Home, Icons.Rounded.Album, Icons.Rounded.Search);
     val unselectedIcons = listOf(Icons.Rounded.Home, Icons.Rounded.Album, Icons.Rounded.Search);
 
@@ -301,10 +314,7 @@ fun Navbar(navController: NavController){
             NavigationBarItem(icon = { Icon(if(selectedItem == index) selectedIcons[index] else unselectedIcons[index], contentDescription = item) },
                 label = { Text(item) },
                 selected = selectedItem == index,
-                onClick = {
-                    selectedItem = index
-                    navController.navigate(item.lowercase())
-                },
+                onClick = { navController.navigate(item.lowercase()) },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.onPrimary,
                     selectedTextColor = MaterialTheme.colorScheme.onPrimary,

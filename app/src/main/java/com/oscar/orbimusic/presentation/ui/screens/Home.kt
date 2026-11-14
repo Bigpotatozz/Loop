@@ -40,8 +40,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.media3.common.util.UnstableApi
 import androidx.annotation.OptIn
 import coil.compose.AsyncImage
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.QueueMusic
+import com.oscar.orbimusic.domain.models.PlaylistSelection
+import com.oscar.orbimusic.domain.models.PlaylistSummary
 import com.oscar.orbimusic.presentation.models.TopAlbumsState
 import com.oscar.orbimusic.presentation.ui.components.DownloadRowState
+import com.oscar.orbimusic.presentation.ui.theme.FavoriteRed
 import com.oscar.orbimusic.presentation.ui.components.DownloadStateButton
 import com.oscar.orbimusic.presentation.ui.icons.PlayerIcons
 import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
@@ -105,7 +111,10 @@ fun HomeScreen(
     onDarkThemeChange: (Boolean) -> Unit,
     onAlbumClick: (Long) -> Unit,
     isMainPlaying: Boolean,
-    onPauseMain: () -> Unit
+    onPauseMain: () -> Unit,
+    playlists: List<PlaylistSummary>,
+    onOpenPlaylist: (PlaylistSelection) -> Unit,
+    onCreatePlaylist: () -> Unit
 ){
 
     val topAlbums by homeViewModel.topAlbums.collectAsState()
@@ -323,6 +332,47 @@ fun HomeScreen(
 
 
         Spacer(Modifier.height(16.dp))
+
+        SectionTitle("Tus playlists")
+
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 22.dp),
+            horizontalArrangement = Arrangement.spacedBy(CARD_GAP)
+        ) {
+            items(playlists, key = { it.id ?: -1L }) { playlist ->
+                val isFavorites = playlist.id == null
+
+                CarouselCard(
+                    title = playlist.name,
+                    subtitle = if (playlist.songCount == 1) "1 canción"
+                    else "${playlist.songCount} canciones",
+                    onClick = {
+                        onOpenPlaylist(
+                            if (isFavorites) PlaylistSelection.Favorites
+                            else PlaylistSelection.Real(playlist.id!!)
+                        )
+                    },
+                    coverContent = { modifier ->
+                        PlaylistCoverMosaic(
+                            coverPaths = playlist.coverPaths,
+                            fallbackIcon = if (isFavorites) Icons.Rounded.Favorite
+                            else Icons.Rounded.QueueMusic,
+                            fallbackTint = if (isFavorites) FavoriteRed
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = modifier,
+                            fallbackIconSize = 40.dp
+                        )
+                    }
+                )
+            }
+
+            item(key = "new-playlist") {
+                NewPlaylistCard(onClick = onCreatePlaylist)
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
     }
 
     SnackbarHost(
@@ -330,6 +380,46 @@ fun HomeScreen(
         modifier = Modifier.align(Alignment.BottomCenter)
     )
     } // Box
+}
+
+//Tarjeta para crear una playlist desde el Home. Mantiene el tamaño y la forma de
+//CarouselCard para que no rompa la fila, pero con un cuadro punteado en vez de
+//portada: asi se lee como una accion y no como una playlist mas.
+@Composable
+private fun NewPlaylistCard(onClick: () -> Unit) {
+    Column(
+        Modifier
+            .width(CARD_SIZE)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            Modifier
+                .size(CARD_SIZE)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Add,
+                contentDescription = "Nueva playlist",
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(40.dp)
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = "Nueva playlist",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }
 
 //Switch del tema de la app.
@@ -493,7 +583,7 @@ private fun ArtistCard(name: String, pictureUrl: String, fanCount: Int?) {
 @Composable
 //onClick null = tarjeta sin accion (las canciones, por ahora)
 private fun CarouselCard(
-    coverUrl: String,
+    coverUrl: String = "",
     title: String,
     subtitle: String,
     onClick: (() -> Unit)? = null,
@@ -502,7 +592,8 @@ private fun CarouselCard(
     isPreviewLoading: Boolean = false,
     downloadState: DownloadRowState? = null,
     downloadEnabled: Boolean = true,
-    onDownload: (() -> Unit)? = null
+    onDownload: (() -> Unit)? = null,
+    coverContent: (@Composable (Modifier) -> Unit)? = null
 ) {
     Column(
         Modifier
@@ -512,15 +603,21 @@ private fun CarouselCard(
     ) {
 
         Box(Modifier.size(CARD_SIZE)) {
-            AsyncImage(
-                model = coverUrl,
-                contentDescription = title,
-                modifier = Modifier
-                    .size(CARD_SIZE)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickableIfNotNull(onPreviewClick),
-                contentScale = ContentScale.Crop
-            )
+            val coverModifier = Modifier
+                .size(CARD_SIZE)
+                .clip(RoundedCornerShape(12.dp))
+                .clickableIfNotNull(onPreviewClick)
+
+            if (coverContent != null) {
+                coverContent(coverModifier)
+            } else {
+                AsyncImage(
+                    model = coverUrl,
+                    contentDescription = title,
+                    modifier = coverModifier,
+                    contentScale = ContentScale.Crop
+                )
+            }
 
             if (isPreviewing || isPreviewLoading) {
                 Box(

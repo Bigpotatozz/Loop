@@ -75,6 +75,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -286,11 +287,12 @@ private fun CreatePlaylistDialog(
 }
 
 @Composable
-private fun PlaylistCoverMosaic(
+fun PlaylistCoverMosaic(
     coverPaths: List<String>,
     fallbackIcon: ImageVector,
     fallbackTint: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    fallbackIconSize: Dp = 22.dp
 ) {
     Box(
         modifier.background(MaterialTheme.colorScheme.surfaceVariant),
@@ -302,7 +304,7 @@ private fun PlaylistCoverMosaic(
                 Icon(
                     imageVector = fallbackIcon,
                     contentDescription = null,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(fallbackIconSize),
                     tint = fallbackTint
                 )
             }
@@ -819,12 +821,33 @@ fun MediaScreen(mediaViewModel: MediaViewModel){
         if (!groupedByPlaylist) mediaViewModel.closePlaylist()
     }
 
+    val pendingPlaylist by mediaViewModel.pendingPlaylist.collectAsState()
+    LaunchedEffect(pendingPlaylist) {
+        pendingPlaylist?.let { selection ->
+            selectedFilter = 3
+            mediaViewModel.openPlaylist(selection)
+            mediaViewModel.consumePendingPlaylist()
+        }
+    }
+
+    val pendingCreate by mediaViewModel.pendingCreatePlaylist.collectAsState()
+
     //El scroll del primer nivel se iza fuera del AnimatedContent: si viviera
     //dentro, entrar a una playlist desmontaria esa rama y al volver la lista
     //arrancaria desde arriba
     val topLevelListState = rememberLazyListState()
 
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
+
+    //Va aqui y no junto al otro encargo porque necesita showCreateDialog, que
+    //se declara en esta linea
+    LaunchedEffect(pendingCreate) {
+        if (pendingCreate) {
+            selectedFilter = 3
+            showCreateDialog = true
+            mediaViewModel.consumePendingCreatePlaylist()
+        }
+    }
 
     //Cual playlist se esta por borrar. Null = ningun dialogo abierto.
     var playlistToDelete by remember { mutableStateOf<PlaylistSummary?>(null) }

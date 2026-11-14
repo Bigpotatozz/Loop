@@ -290,6 +290,27 @@ class MediaViewModel (private val songRepository: SongRepository,
     //Que playlist esta abierta en el segundo nivel. Null = primer nivel.
     private val _openPlaylist = MutableStateFlow<PlaylistSelection?>(null);
     val openPlaylist: StateFlow<PlaylistSelection?> = _openPlaylist.asStateFlow();
+    private val _pendingPlaylist = MutableStateFlow<PlaylistSelection?>(null);
+    val pendingPlaylist: StateFlow<PlaylistSelection?> = _pendingPlaylist.asStateFlow();
+
+    private val _pendingCreatePlaylist = MutableStateFlow(false);
+    val pendingCreatePlaylist: StateFlow<Boolean> = _pendingCreatePlaylist.asStateFlow();
+
+    fun requestOpenPlaylist(selection: PlaylistSelection) {
+        _pendingPlaylist.value = selection;
+    }
+
+    fun requestCreatePlaylist() {
+        _pendingCreatePlaylist.value = true;
+    }
+
+    fun consumePendingPlaylist() {
+        _pendingPlaylist.value = null;
+    }
+
+    fun consumePendingCreatePlaylist() {
+        _pendingCreatePlaylist.value = false;
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val playlistSongs: StateFlow<List<Song>> = _openPlaylist
