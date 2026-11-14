@@ -34,7 +34,7 @@ class DeezerRepositoryImpl(
         return try {
             val response = deezerClient.getTrendingArtists(limit)
             //Aqui es donde se manda a llamar la funcion privada de debajo
-            val artists = response.data.orEmpty().mapNotNull { it.toDomainModel() }
+            val artists = response.data.orEmpty().mapNotNull { it.toDomainModel() }.distinctBy { it.id } // ids repetidos tronarian las keys del LazyRow
 
             //El chart no trae nb_fan, solo artist/{id}. Se piden todos en paralelo 
             val withFans = coroutineScope {
@@ -67,7 +67,7 @@ class DeezerRepositoryImpl(
         return try {
             val response = deezerClient.getTopTracks(limit)
             Result.success(
-                response.data.orEmpty().mapNotNull { it.toDomainModel() }
+                response.data.orEmpty().mapNotNull { it.toDomainModel() }.distinctBy { it.id } // ids repetidos tronarian las keys del LazyRow
             )
 
         } catch (e: CancellationException) {
@@ -82,13 +82,27 @@ class DeezerRepositoryImpl(
         return try {
             val response = deezerClient.getTopAlbums(limit)
             Result.success(
-                response.data.orEmpty().mapNotNull { it.toDomainModel() }
+                response.data.orEmpty().mapNotNull { it.toDomainModel() }.distinctBy { it.id } // ids repetidos tronarian las keys del LazyRow
             )
 
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.e("DeezerRepository", "Fallo al traer el top de albumes", e)
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getChartCountry(): Result<String> {
+        return try {
+            val country = deezerClient.getInfos().country?.takeIf { it.isNotBlank() }
+                ?: return Result.failure(IllegalStateException("Deezer no reportó país"))
+            Result.success(country)
+
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e("DeezerRepository", "Fallo al traer el pais", e)
             Result.failure(e)
         }
     }

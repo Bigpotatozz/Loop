@@ -13,4 +13,7 @@ interface DeezerRepository {
     suspend fun getTopAlbums(limit: Int = 10): Result<List<Album>>
 
     suspend fun getAlbum(id: Long): Result<AlbumDetail>
+
+    //Nombre del pais de los charts ("México")
+    suspend fun getChartCountry(): Result<String>
 }

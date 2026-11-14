@@ -3,6 +3,7 @@ package com.oscar.orbimusic.data.network
 import com.oscar.orbimusic.data.network.dto.AlbumDto
 import com.oscar.orbimusic.data.network.dto.ArtistDto
 import com.oscar.orbimusic.data.network.dto.DeezerListDto
+import com.oscar.orbimusic.data.network.dto.InfosDto
 import com.oscar.orbimusic.data.network.dto.TrackDto
 import okhttp3.Response
 import retrofit2.http.GET
@@ -27,6 +28,10 @@ interface DeezerClient {
     suspend fun getTopAlbums(
         @Query("limit") limit: Int = 10
     ): DeezerListDto<AlbumDto>
+
+    //El pais que Deezer detecta por la IP, el mismo de los charts
+    @GET("infos")
+    suspend fun getInfos(): InfosDto
 
     //El detalle de un artista. Se usa por nb_fan: chart/0/artists no lo trae.
     @GET("artist/{id}")

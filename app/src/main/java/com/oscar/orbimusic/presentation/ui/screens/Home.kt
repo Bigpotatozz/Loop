@@ -36,6 +36,7 @@ import coil.compose.AsyncImage
 import com.oscar.orbimusic.presentation.models.TopAlbumsState
 import com.oscar.orbimusic.presentation.viewmodel.HomeViewModel
 import com.oscar.orbimusic.presentation.models.TrendingState
+import com.oscar.orbimusic.presentation.models.TopTracksState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.draw.drawWithContent
@@ -91,6 +92,8 @@ fun HomeScreen(
 
     val topAlbums by homeViewModel.topAlbums.collectAsState()
     val trending by homeViewModel.trending.collectAsState()
+    val topTracks by homeViewModel.topTracks.collectAsState()
+    val chartCountry by homeViewModel.chartCountry.collectAsState()
 
     Column(
         Modifier
@@ -119,46 +122,7 @@ fun HomeScreen(
         }
 
 
-        SectionTitle("Top 10 álbumes")
 
-        when (val state = topAlbums) {
-            TopAlbumsState.Loading -> {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(CAROUSEL_HEIGHT),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
-                }
-            }
-
-            is TopAlbumsState.Error -> {
-                Text(
-                    text = state.message,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp)
-                )
-            }
-
-            is TopAlbumsState.Ready -> {
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 22.dp),
-                    horizontalArrangement = Arrangement.spacedBy(CARD_GAP)
-                ) {
-                    items(state.albums, key = { it.id }) { album ->
-                        CarouselCard(
-                            coverUrl = album.coverXl,
-                            title = album.title,
-                            subtitle = album.artistName,
-                            onClick = { onAlbumClick(album.id) }
-                        )
-                    }
-                }
-            }
-        }
 
         Spacer(Modifier.height(16.dp))
 
@@ -203,6 +167,94 @@ fun HomeScreen(
         }
 
         Spacer(Modifier.height(16.dp))
+
+
+        SectionTitle(nationalTitle("Top 10 canciones", chartCountry))
+
+        when (val state = topTracks) {
+            TopTracksState.Loading -> {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(CAROUSEL_HEIGHT),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                }
+            }
+
+            is TopTracksState.Error -> {
+                Text(
+                    text = state.message,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp)
+                )
+            }
+
+            is TopTracksState.Ready -> {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 22.dp),
+                    horizontalArrangement = Arrangement.spacedBy(CARD_GAP)
+                ) {
+                    items(state.tracks, key = { it.id }) { track ->
+                        //Sin click por ahora: el preview vive en el
+                        //ViewModel del album, no en el del Home
+                        CarouselCard(
+                            coverUrl = track.coverXl,
+                            title = track.title,
+                            subtitle = track.artistName
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        SectionTitle(nationalTitle("Top 10 álbumes", chartCountry))
+
+        when (val state = topAlbums) {
+            TopAlbumsState.Loading -> {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(CAROUSEL_HEIGHT),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                }
+            }
+
+            is TopAlbumsState.Error -> {
+                Text(
+                    text = state.message,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp)
+                )
+            }
+
+            is TopAlbumsState.Ready -> {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 22.dp),
+                    horizontalArrangement = Arrangement.spacedBy(CARD_GAP)
+                ) {
+                    items(state.albums, key = { it.id }) { album ->
+                        CarouselCard(
+                            coverUrl = album.coverXl,
+                            title = album.title,
+                            subtitle = album.artistName,
+                            onClick = { onAlbumClick(album.id) }
+                        )
+                    }
+                }
+            }
+        }
+
+
+        Spacer(Modifier.height(16.dp))
     }
 }
 
@@ -231,6 +283,9 @@ private fun ThemeSwitch(isDarkTheme: Boolean, onDarkThemeChange: (Boolean) -> Un
         )
     )
 }
+
+private fun nationalTitle(base: String, country: String?): String =
+    if (country.isNullOrBlank()) base else "$base en $country"
 
 @Composable
 private fun SectionTitle(text: String) {
@@ -362,12 +417,13 @@ private fun ArtistCard(name: String, pictureUrl: String, fanCount: Int?) {
 
 //Caratula grande con el titulo y un subtitulo debajo.
 @Composable
-private fun CarouselCard(coverUrl: String, title: String, subtitle: String, onClick: () -> Unit) {
+//onClick null = tarjeta sin accion (las canciones, por ahora)
+private fun CarouselCard(coverUrl: String, title: String, subtitle: String, onClick: (() -> Unit)? = null) {
     Column(
         Modifier
             .width(CARD_SIZE)
             .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
+            .clickable(enabled = onClick != null, onClick = { onClick?.invoke() })
     ) {
 
         AsyncImage(

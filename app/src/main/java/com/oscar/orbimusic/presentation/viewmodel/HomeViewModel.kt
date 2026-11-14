@@ -24,10 +24,24 @@ class HomeViewModel(
     private val _topAlbums = MutableStateFlow<TopAlbumsState>(TopAlbumsState.Loading);
     val topAlbums: StateFlow<TopAlbumsState> = _topAlbums.asStateFlow();
 
+    //Pais de los charts, para titular "en México". Null mientras carga o si
+    //falla: la pantalla cae al titulo sin pais.
+    private val _chartCountry = MutableStateFlow<String?>(null);
+    val chartCountry: StateFlow<String?> = _chartCountry.asStateFlow();
+
     init {
         loadTrending();
         loadTopTracks();
         loadTopAlbums();
+        loadChartCountry();
+    }
+
+    fun loadChartCountry() {
+        viewModelScope.launch {
+            deezerRepository.getChartCountry()
+                .onSuccess { _chartCountry.value = it }
+                .onFailure { Log.w("HomeViewModel", "Sin pais para los titulos", it) }
+        }
     }
     fun loadTrending() {
         viewModelScope.launch {
