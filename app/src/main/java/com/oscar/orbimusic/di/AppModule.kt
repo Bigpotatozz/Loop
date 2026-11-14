@@ -72,9 +72,9 @@ object AppModule {
         initializer { DownloadViewModel(context) }
     }
 
-    //No recibe context: Retrofit no lo necesita, a diferencia de los otros dos
+    //Recibe context desde que el Home reproduce previews
     val homeViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
-        initializer { HomeViewModel(deezerRepository) }
+        initializer { HomeViewModel(deezerRepository, context) }
     }
 
     //Se crea por pantalla (owner = NavBackStackEntry), no por Activity: cada

@@ -26,10 +26,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -111,30 +113,44 @@ fun DownloadStateButton(
     title: String,
     enabled: Boolean,
     onDownload: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    tint: Color? = null,
+    buttonSize: Dp = 48.dp,
+    iconSize: Dp = 24.dp
 ) {
     //Tamaño fijo para que la fila no se mueva al cambiar de estado,
     //igual que el Box de ancho fijo de MediaSongCard
-    Box(modifier.size(48.dp), contentAlignment = Alignment.Center) {
+    Box(modifier.size(buttonSize), contentAlignment = Alignment.Center) {
         //secondary es la tinta de alto contraste en este tema;
         //primary es el color de fondo, no un acento
-        val accent = MaterialTheme.colorScheme.secondary
+        val accent = tint ?: MaterialTheme.colorScheme.secondary
 
         when (state) {
             DownloadRowState.Idle -> {
-                IconButton(onClick = onDownload, enabled = enabled) {
+                IconButton(
+                    onClick = onDownload,
+                    enabled = enabled,
+                    modifier = Modifier.size(buttonSize)
+                ) {
                     Icon(
                         imageVector = Icons.Rounded.Download,
                         contentDescription = "Descargar $title",
-                        tint = if (enabled) accent
-                        else MaterialTheme.colorScheme.onSurfaceVariant
+                        //Con tinte propio (sobre una caratula) se apaga el mismo
+                        //color: caer a onSurfaceVariant lo haria desaparecer.
+                        //Sin tinte, las filas conservan el gris de siempre.
+                        tint = when {
+                            enabled -> accent
+                            tint != null -> accent.copy(alpha = 0.4f)
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.size(iconSize)
                     )
                 }
             }
 
             DownloadRowState.Starting -> {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(iconSize),
                     strokeWidth = 2.dp,
                     color = accent
                 )
@@ -143,7 +159,7 @@ fun DownloadStateButton(
             is DownloadRowState.Running -> {
                 CircularProgressIndicator(
                     progress = { state.percent / 100f },
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(iconSize),
                     strokeWidth = 2.dp,
                     color = accent
                 )
@@ -153,7 +169,8 @@ fun DownloadStateButton(
                 Icon(
                     imageVector = Icons.Rounded.Check,
                     contentDescription = "Descargada",
-                    tint = accent
+                    tint = accent,
+                    modifier = Modifier.size(iconSize)
                 )
             }
         }

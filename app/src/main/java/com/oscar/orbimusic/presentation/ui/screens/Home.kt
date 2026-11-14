@@ -32,8 +32,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.media3.common.util.UnstableApi
+import androidx.annotation.OptIn
 import coil.compose.AsyncImage
 import com.oscar.orbimusic.presentation.models.TopAlbumsState
+import com.oscar.orbimusic.presentation.ui.components.DownloadRowState
+import com.oscar.orbimusic.presentation.ui.components.DownloadStateButton
+import com.oscar.orbimusic.presentation.ui.icons.PlayerIcons
+import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
 import com.oscar.orbimusic.presentation.viewmodel.HomeViewModel
 import com.oscar.orbimusic.presentation.models.TrendingState
 import com.oscar.orbimusic.presentation.models.TopTracksState
@@ -76,18 +87,25 @@ private val ARTIST_CARD_WIDTH = 300.dp
 private val ARTIST_CARD_HEIGHT = 180.dp
 private val ARTIST_PHOTO_WIDTH = 170.dp
 
+private fun Modifier.clickableIfNotNull(onClick: (() -> Unit)?): Modifier =
+    if (onClick == null) this else this.clickable(onClick = onClick)
+
 private fun greetingForHour(hour: Int): String = when (hour) {
     in 6..11 -> "Buenos días"
     in 12..19 -> "Buenas tardes"
     else -> "Buenas noches"
 }
 
+@OptIn(UnstableApi::class)
 @Composable
 fun HomeScreen(
     homeViewModel: HomeViewModel,
+    downloadViewModel: DownloadViewModel,
     isDarkTheme: Boolean,
     onDarkThemeChange: (Boolean) -> Unit,
-    onAlbumClick: (Long) -> Unit
+    onAlbumClick: (Long) -> Unit,
+    isMainPlaying: Boolean,
+    onPauseMain: () -> Unit
 ){
 
     val topAlbums by homeViewModel.topAlbums.collectAsState()
@@ -95,6 +113,33 @@ fun HomeScreen(
     val topTracks by homeViewModel.topTracks.collectAsState()
     val chartCountry by homeViewModel.chartCountry.collectAsState()
 
+    val previewTrackId by homeViewModel.previewTrackId.collectAsState()
+    val isPreviewLoading by homeViewModel.isPreviewLoading.collectAsState()
+
+    val isDownloading by downloadViewModel.isDownloading.collectAsState()
+    val downloadingId by downloadViewModel.downloadingId.collectAsState()
+    val downloadProgress by downloadViewModel.downloadProgress.collectAsState()
+    val completedDownloads by downloadViewModel.completedDownloads.collectAsState()
+    val downloadError by downloadViewModel.downloadError.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(isMainPlaying) {
+        if (isMainPlaying) homeViewModel.stopPreview()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { homeViewModel.stopPreview() }
+    }
+
+    LaunchedEffect(downloadError) {
+        downloadError?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            downloadViewModel.clearDownloadError()
+        }
+    }
+
+    Box(Modifier.fillMaxSize()) {
     Column(
         Modifier
             .fillMaxSize()
@@ -199,12 +244,35 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(CARD_GAP)
                 ) {
                     items(state.tracks, key = { it.id }) { track ->
-                        //Sin click por ahora: el preview vive en el
-                        //ViewModel del album, no en el del Home
+                        val rowKey = downloadViewModel.deezerRowKey(track.id)
+                        val rowState = when {
+                            rowKey in completedDownloads -> DownloadRowState.Done
+                            rowKey != downloadingId -> DownloadRowState.Idle
+                            downloadProgress < 0 -> DownloadRowState.Starting
+                            else -> DownloadRowState.Running(downloadProgress)
+                        }
+
                         CarouselCard(
                             coverUrl = track.coverXl,
                             title = track.title,
-                            subtitle = track.artistName
+                            subtitle = track.artistName,
+                            onPreviewClick = track.previewUrl?.let {
+                                {
+                                    if (isMainPlaying) onPauseMain()
+                                    homeViewModel.togglePreview(track.id)
+                                }
+                            },
+                            isPreviewing = previewTrackId == track.id && !isPreviewLoading,
+                            isPreviewLoading = previewTrackId == track.id && isPreviewLoading,
+                            downloadState = rowState,
+                            downloadEnabled = !isDownloading,
+                            onDownload = {
+                                downloadViewModel.downloadDeezerTrack(
+                                    trackId = track.id,
+                                    artist = track.artistName,
+                                    title = track.title
+                                )
+                            }
                         )
                     }
                 }
@@ -256,6 +324,12 @@ fun HomeScreen(
 
         Spacer(Modifier.height(16.dp))
     }
+
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.BottomCenter)
+    )
+    } // Box
 }
 
 //Switch del tema de la app.
@@ -418,22 +492,81 @@ private fun ArtistCard(name: String, pictureUrl: String, fanCount: Int?) {
 //Caratula grande con el titulo y un subtitulo debajo.
 @Composable
 //onClick null = tarjeta sin accion (las canciones, por ahora)
-private fun CarouselCard(coverUrl: String, title: String, subtitle: String, onClick: (() -> Unit)? = null) {
+private fun CarouselCard(
+    coverUrl: String,
+    title: String,
+    subtitle: String,
+    onClick: (() -> Unit)? = null,
+    onPreviewClick: (() -> Unit)? = null,
+    isPreviewing: Boolean = false,
+    isPreviewLoading: Boolean = false,
+    downloadState: DownloadRowState? = null,
+    downloadEnabled: Boolean = true,
+    onDownload: (() -> Unit)? = null
+) {
     Column(
         Modifier
             .width(CARD_SIZE)
             .clip(RoundedCornerShape(12.dp))
-            .clickable(enabled = onClick != null, onClick = { onClick?.invoke() })
+            .clickableIfNotNull(onClick)
     ) {
 
-        AsyncImage(
-            model = coverUrl,
-            contentDescription = title,
-            modifier = Modifier
-                .size(CARD_SIZE)
-                .clip(RoundedCornerShape(12.dp)),
-            contentScale = ContentScale.Crop
-        )
+        Box(Modifier.size(CARD_SIZE)) {
+            AsyncImage(
+                model = coverUrl,
+                contentDescription = title,
+                modifier = Modifier
+                    .size(CARD_SIZE)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickableIfNotNull(onPreviewClick),
+                contentScale = ContentScale.Crop
+            )
+
+            if (isPreviewing || isPreviewLoading) {
+                Box(
+                    Modifier
+                        .size(CARD_SIZE)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.35f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isPreviewLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = PlayerIcons.Pause,
+                            contentDescription = "Detener preview",
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+            }
+
+            if (downloadState != null && onDownload != null) {
+                Box(
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(6.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.6f))
+                ) {
+                    DownloadStateButton(
+                        state = downloadState,
+                        title = title,
+                        enabled = downloadEnabled,
+                        onDownload = onDownload,
+                        tint = Color.White,
+                        buttonSize = 32.dp,
+                        iconSize = 18.dp
+                    )
+                }
+            }
+        }
 
         Spacer(Modifier.height(8.dp))
 

@@ -233,11 +233,16 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaVi
     NavHost(hostController, "home", modifier){
 
         composable("home"){
+            val mainPlayerState by mediaViewModel.playerState.collectAsState()
+
             HomeScreen(
                 homeViewModel,
+                downloadViewModel = downloadViewModel,
                 isDarkTheme = isDarkTheme,
                 onDarkThemeChange = onDarkThemeChange,
-                onAlbumClick = { id -> hostController.navigate("album/$id") }
+                onAlbumClick = { id -> hostController.navigate("album/$id") },
+                isMainPlaying = mainPlayerState.isPlaying,
+                onPauseMain = { mediaViewModel.pauseSong() }
             )
         }
 
