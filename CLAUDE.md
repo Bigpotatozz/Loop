@@ -170,6 +170,10 @@ io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1
 7. 🔄 Playlists personalizadas
 8. ⏸️ **Selector de tema independiente del sistema** (aplazado 10 nov 2026)
 9. ⏸️ **Pestaña de usuario con estadísticas** (aplazado 10 nov 2026)
+10. 🔄 **Pantalla de artista** — el carrusel del Home ya los lista pero no son
+    tocables. Los endpoints están verificados y documentados en "API de Deezer";
+    `artist/{id}/top` trae `preview`, así que se reusa `PreviewPlayer`. Falta decidir
+    qué secciones lleva (top de canciones, álbumes, similares) y cómo se navega.
 
 ### 8. Selector de tema — contexto ya investigado
 
@@ -281,6 +285,65 @@ activa** ("Buscar en YouTube Music...") y el `contentDescription` dice estado y
 acción. Al cambiar de fuente con una búsqueda activa se relanza sola: el ViewModel
 guarda `lastQuery` para no depender del estado de la pantalla, así funciona igual
 si la búsqueda vino del campo o de un widget de género.
+
+### API de Deezer — qué trae cada endpoint
+
+Todo lo que se usa es **público y sin autenticación**: `api.deezer.com` con Retrofit +
+Gson (`DeezerClient`, base `https://api.deezer.com/`). Lo verificado contra el servidor:
+
+**Deezer geolocaliza por IP.** Los `chart/0/*` devuelven el top del país del dispositivo
+sin mandar ningún parámetro; **no existe un parámetro de país**. Por eso los títulos usan
+`nationalTitle()` con lo que reporta `/infos`, en vez de decir "México" a secas.
+
+**Recomendaciones personalizadas (`user/me/recommendations/*`) exigen OAuth** y una
+cuenta de Deezer. Quedan fuera mientras la app no tenga usuarios.
+
+#### Artistas — dónde vive cada dato
+
+`chart/0/artists` trae: `id, name, link, position, radio, tracklist, type` y las cuatro
+`picture_*`. **No trae `nb_fan` ni `nb_album`.** Por eso `DeezerRepositoryImpl` hace una
+segunda pasada pidiendo `artist/{id}` de los 10 en paralelo (`async`/`awaitAll`) solo
+para los fans. No se puede evitar: el chart simplemente no manda ese campo.
+
+`artist/{id}` agrega exactamente tres cosas: **`nb_fan`**, **`nb_album`** y `share`.
+**No hay biografía, género, país ni fecha de formación** — la API no los expone.
+
+Lo que cuelga de un artista, por si se hace una pantalla de artista:
+
+| Endpoint | Trae |
+|---|---|
+| `artist/{id}/top` | 100 canciones, **con `preview`** |
+| `artist/{id}/albums` | álbumes con `release_date`, `record_type`, `fans`, `genre_id` |
+| `artist/{id}/related` | 20 similares, **ya con `nb_fan` y `nb_album`** (sin pasada extra) |
+| `artist/{id}/playlists` | playlists donde aparece |
+| `artist/{id}/radio` | canciones para radio del artista, con `preview` |
+
+`artist/{id}/top` trae `preview`, así que una pantalla de artista puede reproducir los
+30s reusando `PreviewPlayer` sin nada nuevo.
+
+`ArtistDto` declara `share`, `nb_album`, `nb_fan` y `position` como nullable a
+propósito: `position` solo llega en el chart y los otros tres solo en el detalle.
+**Ninguna respuesta trae todos.**
+
+#### Otros endpoints verificados
+
+- `chart/0` devuelve las cinco listas (tracks, albums, artists, playlists, podcasts) en
+  **una sola petición**.
+- Los `chart/0/*` dan 10 ítems por defecto; `limit` llega a 100 sin problema.
+- `editorial/0/releases` **devuelve vacío** y `radio/top` **da error**. No usarlos.
+- `album/{id}` responde **200 con `{"error":{...}}`** si el id no existe, no un 404. Por
+  eso `toAlbumDetail()` devuelve null y el repositorio lo convierte en `Result.failure`.
+
+#### Preview de 30s — `PreviewPlayer`
+
+Vive en `presentation/player/PreviewPlayer.kt` y lo comparten el Home y la pantalla de
+álbum, cada uno con su instancia. Usa un **ExoPlayer propio, no el de
+`AudioPlayerService`**: el preview no debe tocar la cola ni salir en la notificación.
+
+**Las URLs de preview caducan a los ~15 min y Deezer contesta 403.** Por eso el
+constructor recibe `onNeedFreshUrl: suspend (Long) -> String?`: cada pantalla sabe cómo
+conseguir una nueva (el álbum se vuelve a pedir, el Home recarga el chart). El reintento
+corre **una sola vez** por reproducción (`retriedExpiredUrl`) para no entrar en bucle.
 
 ### Sincronización con FileScanner
 - FileScanner escanea la misma carpeta que DownloadService
