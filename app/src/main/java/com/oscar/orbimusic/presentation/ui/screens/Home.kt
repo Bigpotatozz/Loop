@@ -60,7 +60,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import java.util.Calendar
-import java.util.Locale
+import com.oscar.orbimusic.presentation.utils.formatFans
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DarkMode
@@ -110,6 +110,7 @@ fun HomeScreen(
     isDarkTheme: Boolean,
     onDarkThemeChange: (Boolean) -> Unit,
     onAlbumClick: (Long) -> Unit,
+    onArtistClick: (Long) -> Unit,
     isMainPlaying: Boolean,
     onPauseMain: () -> Unit,
     playlists: List<PlaylistSummary>,
@@ -213,7 +214,8 @@ fun HomeScreen(
                         ArtistCard(
                             name = artist.name,
                             pictureUrl = artist.pictureXl,
-                            fanCount = artist.fanCount
+                            fanCount = artist.fanCount,
+                            onClick = { onArtistClick(artist.id) }
                         )
                     }
                 }
@@ -464,21 +466,8 @@ private fun SectionTitle(text: String) {
     )
 }
 
-private fun formatFans(fans: Int): String = when {
-    fans >= 1_000_000 -> {
-        val millions = fans / 1_000_000.0
-        //Un decimal solo si aporta: "12 M" y no "12.0 M"
-        val text = if (millions >= 10) millions.toInt().toString()
-        else String.format(Locale.US, "%.1f", millions).removeSuffix(".0")
-        "$text M fans"
-    }
-    fans >= 1_000 -> "${fans / 1_000} mil fans"
-    fans == 1 -> "1 fan"
-    else -> "$fans fans"
-}
-
 @Composable
-private fun ArtistCard(name: String, pictureUrl: String, fanCount: Int?) {
+private fun ArtistCard(name: String, pictureUrl: String, fanCount: Int?, onClick: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -513,6 +502,8 @@ private fun ArtistCard(name: String, pictureUrl: String, fanCount: Int?) {
             .size(width = ARTIST_CARD_WIDTH, height = ARTIST_CARD_HEIGHT)
             .clip(RoundedCornerShape(12.dp))
             .background(cardColor)
+            //Despues del clip para que el ripple respete las esquinas
+            .clickable(onClick = onClick)
     ) {
         AsyncImage(
             model = request,

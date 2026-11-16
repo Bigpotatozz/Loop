@@ -19,6 +19,7 @@ import com.oscar.orbimusic.data.repository.SongRepositoryImpl
 import com.oscar.orbimusic.domain.repository.DeezerRepository
 import com.oscar.orbimusic.domain.repository.SongRepository
 import com.oscar.orbimusic.presentation.viewmodel.AlbumScreenViewModel
+import com.oscar.orbimusic.presentation.viewmodel.ArtistScreenViewModel
 import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
 import com.oscar.orbimusic.presentation.viewmodel.HomeViewModel
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
@@ -82,6 +83,11 @@ object AppModule {
     val albumViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
         //Context para el ExoPlayer del preview de 30s
         initializer { AlbumScreenViewModel(deezerRepository, context) }
+    }
+
+    //Mismo criterio que el de album: uno por NavBackStackEntry
+    val artistViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
+        initializer { ArtistScreenViewModel(deezerRepository, context) }
     }
 
     private val deezerApi: DeezerClient by lazy {

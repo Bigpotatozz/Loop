@@ -39,6 +39,14 @@ interface DeezerClient {
         @Path("id") id: Long
     ): ArtistDto
 
+    //Las canciones mas populares del artista. Traen preview y "album" anidado
+    //con la caratula, pero no "position": el orden de la lista es el ranking.
+    @GET("artist/{id}/top")
+    suspend fun getArtistTop(
+        @Path("id") id: Long,
+        @Query("limit") limit: Int = 5
+    ): DeezerListDto<TrackDto>
+
     //El album completo con sus canciones en "tracks". Ojo: si el id no existe
     //Deezer responde 200 con {"error":{...}}, asi que llega un AlbumDto vacio.
     @GET("album/{id}")

@@ -8,6 +8,7 @@ import com.oscar.orbimusic.data.network.dto.TrackDto
 import com.oscar.orbimusic.domain.models.Album
 import com.oscar.orbimusic.domain.models.AlbumDetail
 import com.oscar.orbimusic.domain.models.Artist
+import com.oscar.orbimusic.domain.models.ArtistDetail
 import com.oscar.orbimusic.domain.models.Track
 import com.oscar.orbimusic.domain.repository.DeezerRepository
 import kotlinx.coroutines.async
@@ -123,6 +124,45 @@ class DeezerRepositoryImpl(
             Result.failure(e)
         }
     }
+
+    override suspend fun getArtist(id: Long, topLimit: Int): Result<ArtistDetail> {
+        return try {
+            val artist = coroutineScope {
+                //Las dos peticiones son independientes: van en paralelo
+                val detail = async { deezerClient.getArtist(id) }
+
+                //Si falla el top la pantalla se muestra igual con la lista
+                //vacia; solo el detalle es indispensable
+                val top = async {
+                    try {
+                        deezerClient.getArtistTop(id, topLimit).data.orEmpty()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w("DeezerRepository", "Sin top para el artista $id", e)
+                        emptyList()
+                    }
+                }
+
+                //El orden de /top es el ranking; se numera desde 1
+                val tracks = top.await()
+                    .mapIndexedNotNull { index, track -> track.toDomainModel(positionOverride = index + 1) }
+                    .distinctBy { it.id } // ids repetidos tronarian las keys del LazyColumn
+
+                detail.await().toArtistDetail(tracks)
+            }
+
+            //Null = Deezer contesto 200 con {"error":...}, igual que album/{id}
+                ?: return Result.failure(IllegalStateException("Artista no encontrado"))
+            Result.success(artist)
+
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e("DeezerRepository", "Fallo al traer el artista $id", e)
+            Result.failure(e)
+        }
+    }
 }
 
 
@@ -146,7 +186,8 @@ private fun ArtistDto.toDomainModel(): Artist? {
 }
 
 
-private fun TrackDto.toDomainModel(): Track? {
+//positionOverride: artist/{id}/top no manda "position", se numera por indice
+private fun TrackDto.toDomainModel(positionOverride: Int? = null): Track? {
     val safeId = id ?: return null
     val safeTitle = title?.takeIf { it.isNotBlank() } ?: return null
     val safeArtist = artist?.name?.takeIf { it.isNotBlank() } ?: return null
@@ -161,8 +202,25 @@ private fun TrackDto.toDomainModel(): Track? {
         coverMedium = medium,
         coverXl = xl,
         durationSeconds = duration,
-        position = position,
+        position = positionOverride ?: position,
         previewUrl = preview?.takeIf { it.startsWith("http") }
+    )
+}
+
+
+//Mismas guardas que toDomainModel: sin id, nombre o foto no hay pantalla
+private fun ArtistDto.toArtistDetail(topTracks: List<Track>): ArtistDetail? {
+    val safeId = id ?: return null
+    val safeName = name?.takeIf { it.isNotBlank() } ?: return null
+    val xl = pictureXl ?: pictureBig ?: pictureMedium ?: return null
+
+    return ArtistDetail(
+        id = safeId,
+        name = safeName,
+        pictureXl = xl,
+        fanCount = nbFan,
+        albumCount = nbAlbum,
+        topTracks = topTracks
     )
 }
 

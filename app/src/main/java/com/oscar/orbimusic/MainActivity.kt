@@ -50,6 +50,8 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.oscar.orbimusic.presentation.ui.screens.AlbumScreen
 import com.oscar.orbimusic.presentation.viewmodel.AlbumScreenViewModel
+import com.oscar.orbimusic.presentation.ui.screens.ArtistScreen
+import com.oscar.orbimusic.presentation.viewmodel.ArtistScreenViewModel
 import com.oscar.orbimusic.presentation.ui.screens.HomeScreen
 import com.oscar.orbimusic.presentation.ui.screens.MediaScreen
 import com.oscar.orbimusic.presentation.ui.theme.OrbiMusicTheme
@@ -243,6 +245,7 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaVi
                 isDarkTheme = isDarkTheme,
                 onDarkThemeChange = onDarkThemeChange,
                 onAlbumClick = { id -> hostController.navigate("album/$id") },
+                onArtistClick = { id -> hostController.navigate("artist/$id") },
                 isMainPlaying = mainPlayerState.isPlaying,
                 onPauseMain = { mediaViewModel.pauseSong() },
                 playlists = playlists,
@@ -270,6 +273,27 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaVi
             AlbumScreen(
                 albumId = entry.arguments?.getLong("albumId") ?: 0L,
                 albumViewModel = albumViewModel,
+                downloadViewModel = downloadViewModel,
+                isMainPlaying = mainPlayerState.isPlaying,
+                onPauseMain = { mediaViewModel.pauseSong() },
+                onBack = { hostController.popBackStack() }
+            )
+        }
+
+        //Misma forma que la ruta del album: ViewModel por entrada del back stack
+        composable(
+            "artist/{artistId}",
+            arguments = listOf(navArgument("artistId") { type = NavType.LongType })
+        ){ entry ->
+
+            val artistViewModel = ViewModelProvider(
+                entry, AppModule.artistViewModelFactory
+            )[ArtistScreenViewModel::class.java]
+            val mainPlayerState by mediaViewModel.playerState.collectAsState()
+
+            ArtistScreen(
+                artistId = entry.arguments?.getLong("artistId") ?: 0L,
+                artistViewModel = artistViewModel,
                 downloadViewModel = downloadViewModel,
                 isMainPlaying = mainPlayerState.isPlaying,
                 onPauseMain = { mediaViewModel.pauseSong() },

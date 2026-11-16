@@ -229,9 +229,10 @@ fun AlbumScreen(
 }
 
 
-//Mismo boton flotante que el detalle de playlist (Media.kt)
+//Mismo boton flotante que el detalle de playlist (Media.kt). Tambien lo usa
+//ArtistScreen, por eso no es private.
 @Composable
-private fun AlbumBackButton(onBack: () -> Unit) {
+internal fun AlbumBackButton(onBack: () -> Unit) {
     Box(
         Modifier
             .padding(start = 6.dp, top = 6.dp)
@@ -344,8 +345,9 @@ private fun albumSummary(album: AlbumDetail): String {
     return parts.joinToString(" · ")
 }
 
+//Tambien la usa ArtistScreen para las canciones populares
 @Composable
-private fun AlbumTrackRow(
+internal fun AlbumTrackRow(
     track: Track,
     showArtist: Boolean,
     isPreviewing: Boolean,
