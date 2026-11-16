@@ -1,19 +1,29 @@
 package com.oscar.orbimusic.presentation.ui.screens
 
 import androidx.annotation.OptIn
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -24,9 +34,13 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -45,6 +59,7 @@ import com.oscar.orbimusic.presentation.utils.formatFans
 import com.oscar.orbimusic.presentation.viewmodel.ArtistScreenViewModel
 import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
 
+private const val COLLAPSED_COUNT = 5
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -82,6 +97,8 @@ fun ArtistScreen(
     val downloadError by downloadViewModel.downloadError.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
+
+    var expanded by rememberSaveable(artistId) { mutableStateOf(false) }
 
     LaunchedEffect(downloadError) {
         downloadError?.let { message ->
@@ -134,6 +151,9 @@ fun ArtistScreen(
 
             is ArtistState.Ready -> {
                 val artist = current.artist
+                val canExpand = artist.topTracks.size > COLLAPSED_COUNT
+                val visibleTracks =
+                    if (expanded) artist.topTracks else artist.topTracks.take(COLLAPSED_COUNT)
 
                 LazyColumn(
                     Modifier.fillMaxSize(),
@@ -148,12 +168,11 @@ fun ArtistScreen(
                     item(key = "popular-title") {
                         Text(
                             text = "Canciones populares",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
-                                letterSpacing = (-0.3).sp
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp
                             ),
-                            modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 6.dp)
+                            modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 4.dp)
                         )
                     }
 
@@ -170,7 +189,7 @@ fun ArtistScreen(
                         }
                     }
 
-                    items(artist.topTracks, key = { it.id }) { track ->
+                    items(visibleTracks, key = { it.id }) { track ->
                         val rowKey = downloadViewModel.deezerRowKey(track.id)
 
                         //Misma logica que AlbumScreen: un solo progreso,
@@ -204,8 +223,45 @@ fun ArtistScreen(
                                     title = track.title
                                 )
                             },
-                            modifier = Modifier.padding(horizontal = 12.dp)
+                            modifier = Modifier.padding(horizontal = 2.dp),
+                            coverUrl = track.coverMedium
                         )
+                    }
+
+                    if (canExpand) {
+                        item(key = "toggle-more") {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                //Chip gris: el fondo y la flecha dicen que se toca
+                                Row(
+                                    Modifier
+                                        .clip(RoundedCornerShape(100))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                        .clickable { expanded = !expanded }
+                                        .padding(start = 16.dp, end = 10.dp, top = 7.dp, bottom = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (expanded) "Ver menos" else "Ver más",
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = if (expanded) Icons.Rounded.KeyboardArrowUp
+                                        else Icons.Rounded.KeyboardArrowDown,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -39,7 +39,7 @@ class ArtistScreenViewModel(
         viewModelScope.launch {
             _artist.value = ArtistState.Loading;
 
-            deezerRepository.getArtist(artistId)
+            deezerRepository.getArtist(artistId, TOP_LIMIT)
                 .onSuccess { artist ->
                     Log.d("ArtistScreenViewModel", "Artista recibido: ${artist.name} (${artist.topTracks.size} populares)")
                     _artist.value = ArtistState.Ready(artist);
@@ -72,12 +72,16 @@ class ArtistScreenViewModel(
     private suspend fun refreshArtistAndGetUrl(trackId: Long): String? {
         val id = currentArtistId ?: return null;
 
-        return deezerRepository.getArtist(id)
+        return deezerRepository.getArtist(id, TOP_LIMIT)
             .onSuccess { _artist.value = ArtistState.Ready(it) }
             .getOrNull()
             ?.topTracks
             ?.firstOrNull { it.id == trackId }
             ?.previewUrl;
+    }
+
+    companion object {
+        const val TOP_LIMIT = 10;
     }
 
     override fun onCleared() {

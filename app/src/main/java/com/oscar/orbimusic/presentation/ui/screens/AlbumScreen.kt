@@ -356,7 +356,9 @@ internal fun AlbumTrackRow(
     downloadState: DownloadRowState,
     downloadEnabled: Boolean,
     onDownload: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    //Solo ArtistScreen la pasa: en el album todas comparten caratula
+    coverUrl: String? = null
 ) {
     Row(
         modifier
@@ -392,6 +394,18 @@ internal fun AlbumTrackRow(
                     textAlign = TextAlign.Center
                 )
             }
+        }
+
+        if (coverUrl != null) {
+            Spacer(Modifier.width(8.dp))
+            AsyncImage(
+                model = coverUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(6.dp))
+            )
         }
 
         Spacer(Modifier.width(12.dp))
