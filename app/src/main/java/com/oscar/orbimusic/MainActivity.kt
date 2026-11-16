@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
@@ -158,7 +159,11 @@ class MainActivity : ComponentActivity() {
                             Scaffold(modifier = Modifier.fillMaxSize(),
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 bottomBar = {
-                                Navbar(navController)
+                                Navbar(
+                                    navController,
+                                    //Home siempre vuelve al Home limpio, sin la busqueda
+                                    onHomeClick = { homeViewModel.clearSearch() }
+                                )
                             }) { innerPadding ->
 
                                 Box(Modifier.fillMaxSize()
@@ -321,7 +326,7 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaVi
 
 
 @Composable
-fun Navbar(navController: NavController){
+fun Navbar(navController: NavController, onHomeClick: () -> Unit){
     val items = listOf("Home", "Media", "Search");
 
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -341,7 +346,14 @@ fun Navbar(navController: NavController){
             NavigationBarItem(icon = { Icon(if(selectedItem == index) selectedIcons[index] else unselectedIcons[index], contentDescription = item) },
                 label = { Text(item) },
                 selected = selectedItem == index,
-                onClick = { navController.navigate(item.lowercase()) },
+                onClick = {
+                    val route = item.lowercase()
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.findStartDestination().id)
+                        launchSingleTop = true
+                    }
+                    if (route == "home") onHomeClick()
+                },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.onPrimary,
                     selectedTextColor = MaterialTheme.colorScheme.onPrimary,

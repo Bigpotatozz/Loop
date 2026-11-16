@@ -4,6 +4,7 @@ import com.oscar.orbimusic.domain.models.Album
 import com.oscar.orbimusic.domain.models.AlbumDetail
 import com.oscar.orbimusic.domain.models.Artist
 import com.oscar.orbimusic.domain.models.ArtistDetail
+import com.oscar.orbimusic.domain.models.DeezerSearchResults
 import com.oscar.orbimusic.domain.models.Track
 
 interface DeezerRepository {
@@ -14,6 +15,9 @@ interface DeezerRepository {
     suspend fun getTopAlbums(limit: Int = 10): Result<List<Album>>
 
     suspend fun getAlbum(id: Long): Result<AlbumDetail>
+
+    //Artistas, albumes y canciones a la vez, para el buscador del Home
+    suspend fun search(query: String, limit: Int = 10): Result<DeezerSearchResults>
 
     //Detalle del artista (fans, albumes) + sus canciones populares
     suspend fun getArtist(id: Long, topLimit: Int = 5): Result<ArtistDetail>

@@ -9,6 +9,7 @@ import com.oscar.orbimusic.domain.models.Album
 import com.oscar.orbimusic.domain.models.AlbumDetail
 import com.oscar.orbimusic.domain.models.Artist
 import com.oscar.orbimusic.domain.models.ArtistDetail
+import com.oscar.orbimusic.domain.models.DeezerSearchResults
 import com.oscar.orbimusic.domain.models.Track
 import com.oscar.orbimusic.domain.repository.DeezerRepository
 import kotlinx.coroutines.async
@@ -122,6 +123,65 @@ class DeezerRepositoryImpl(
         } catch (e: Exception) {
             Log.e("DeezerRepository", "Fallo al traer el album $id", e)
             Result.failure(e)
+        }
+    }
+
+    override suspend fun search(query: String, limit: Int): Result<DeezerSearchResults> {
+        return try {
+            coroutineScope {
+                val artists = async {
+                    searchPart("artistas", query) {
+                        deezerClient.searchArtists(query, limit).data.orEmpty()
+                            .mapNotNull { it.toDomainModel() }
+                    }
+                }
+                val albums = async {
+                    searchPart("albumes", query) {
+                        deezerClient.searchAlbums(query, limit).data.orEmpty()
+                            .mapNotNull { it.toDomainModel() }
+                    }
+                }
+                val tracks = async {
+                    searchPart("canciones", query) {
+                        //Se numeran por relevancia: la fila del album pinta
+                        //"position" y la busqueda no la trae
+                        deezerClient.searchTracks(query, limit).data.orEmpty()
+                            .mapIndexedNotNull { index, track -> track.toDomainModel(positionOverride = index + 1) }
+                    }
+                }
+
+                val a = artists.await()
+                val b = albums.await()
+                val c = tracks.await()
+
+                if (a == null && b == null && c == null) {
+                    Result.failure(IllegalStateException("No se pudo buscar. Revisa tu conexión."))
+                } else {
+                    Result.success(
+                        DeezerSearchResults(
+                            artists = a.orEmpty().distinctBy { it.id },
+                            albums = b.orEmpty().distinctBy { it.id },
+                            tracks = c.orEmpty().distinctBy { it.id }
+                        )
+                    )
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e("DeezerRepository", "Fallo la busqueda \"$query\"", e)
+            Result.failure(e)
+        }
+    }
+
+    private suspend fun <T> searchPart(label: String, query: String, block: suspend () -> List<T>): List<T>? {
+        return try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("DeezerRepository", "Fallo la busqueda de $label \"$query\"", e)
+            null
         }
     }
 

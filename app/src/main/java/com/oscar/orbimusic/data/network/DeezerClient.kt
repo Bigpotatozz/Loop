@@ -61,6 +61,24 @@ interface DeezerClient {
         @Query("limit") limit: Int = 10
     ): DeezerListDto<ArtistDto>
 
+    @GET("search/artist")
+    suspend fun searchArtists(
+        @Query("q") query: String,
+        @Query("limit") limit: Int = 10
+    ): DeezerListDto<ArtistDto>
+
+    @GET("search/album")
+    suspend fun searchAlbums(
+        @Query("q") query: String,
+        @Query("limit") limit: Int = 10
+    ): DeezerListDto<AlbumDto>
+
+    @GET("search")
+    suspend fun searchTracks(
+        @Query("q") query: String,
+        @Query("limit") limit: Int = 10
+    ): DeezerListDto<TrackDto>
+
     //El album completo con sus canciones en "tracks". Ojo: si el id no existe
     //Deezer responde 200 con {"error":{...}}, asi que llega un AlbumDto vacio.
     @GET("album/{id}")

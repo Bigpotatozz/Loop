@@ -5,10 +5,12 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.oscar.orbimusic.domain.repository.DeezerRepository
+import com.oscar.orbimusic.presentation.models.HomeSearchState
 import com.oscar.orbimusic.presentation.models.TopAlbumsState
 import com.oscar.orbimusic.presentation.models.TopTracksState
 import com.oscar.orbimusic.presentation.models.TrendingState
 import com.oscar.orbimusic.presentation.player.PreviewPlayer
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -116,9 +118,58 @@ class HomeViewModel(
         }
     }
 
+    //Buscador del Home (Deezer)
+    private val _search = MutableStateFlow<HomeSearchState>(HomeSearchState.Idle);
+    val search: StateFlow<HomeSearchState> = _search.asStateFlow();
+
+    private val _query = MutableStateFlow("");
+    val query: StateFlow<String> = _query.asStateFlow();
+
+    fun onQueryChange(text: String) {
+        _query.value = text;
+    }
+
+    //Una busqueda nueva cancela la anterior: si no, una respuesta lenta de la
+    //busqueda vieja podria pisar los resultados de la nueva
+    private var searchJob: Job? = null;
+
+    fun search(query: String) {
+        val trimmed = query.trim();
+        if (trimmed.isEmpty()) {
+            clearSearch();
+            return;
+        }
+
+        searchJob?.cancel();
+        searchJob = viewModelScope.launch {
+            _search.value = HomeSearchState.Loading;
+
+            deezerRepository.search(trimmed)
+                .onSuccess { results ->
+                    Log.d("HomeViewModel", "Busqueda \"$trimmed\": ${results.artists.size} artistas, ${results.albums.size} albumes, ${results.tracks.size} canciones")
+                    _search.value = HomeSearchState.Ready(trimmed, results);
+                }
+                .onFailure { e ->
+                    Log.e("HomeViewModel", "Fallo la busqueda \"$trimmed\"", e)
+                    _search.value = HomeSearchState.Error(
+                        e.message ?: "No se pudo buscar"
+                    );
+                }
+        }
+    }
+
+    fun clearSearch() {
+        searchJob?.cancel();
+        //Texto y resultados se limpian juntos, nunca uno sin el otro
+        _query.value = "";
+        //Si sonaba el preview de un resultado, se calla junto con la busqueda
+        if (searchTrackUrl(preview.previewTrackId.value) != null) preview.stop();
+        _search.value = HomeSearchState.Idle;
+    }
+
     fun togglePreview(trackId: Long) {
-        val url = (_topTracks.value as? TopTracksState.Ready)
-            ?.tracks?.firstOrNull { it.id == trackId }?.previewUrl;
+        //La cancion puede ser del top o de los resultados de busqueda
+        val url = topTrackUrl(trackId) ?: searchTrackUrl(trackId);
         preview.toggle(trackId, url);
     }
 
@@ -126,7 +177,26 @@ class HomeViewModel(
 
     fun clearPreviewError() = preview.clearError();
 
+    private fun topTrackUrl(trackId: Long?): String? =
+        (_topTracks.value as? TopTracksState.Ready)
+            ?.tracks?.firstOrNull { it.id == trackId }?.previewUrl;
+
+    private fun searchTrackUrl(trackId: Long?): String? =
+        (_search.value as? HomeSearchState.Ready)
+            ?.results?.tracks?.firstOrNull { it.id == trackId }?.previewUrl;
+
+    //La URL caduco: se vuelve a pedir la lista de donde salio la cancion
     private suspend fun refreshTracksAndGetUrl(trackId: Long): String? {
+        val searchState = _search.value as? HomeSearchState.Ready;
+        if (searchState != null && searchState.results.tracks.any { it.id == trackId }) {
+            return deezerRepository.search(searchState.query)
+                .onSuccess { _search.value = HomeSearchState.Ready(searchState.query, it) }
+                .getOrNull()
+                ?.tracks
+                ?.firstOrNull { it.id == trackId }
+                ?.previewUrl;
+        }
+
         return deezerRepository.getTopTracks()
             .onSuccess { _topTracks.value = TopTracksState.Ready(it) }
             .getOrNull()

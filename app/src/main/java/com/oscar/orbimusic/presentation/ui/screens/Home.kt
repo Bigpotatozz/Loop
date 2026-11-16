@@ -81,6 +81,20 @@ import coil.request.ImageRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import com.oscar.orbimusic.domain.models.Track
+import com.oscar.orbimusic.presentation.models.HomeSearchState
 
 private val CARD_SIZE = 140.dp
 internal val CARD_GAP = 10.dp
@@ -133,6 +147,16 @@ fun HomeScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val searchState by homeViewModel.search.collectAsState()
+    //Del ViewModel, igual que los resultados: asi sobreviven juntos al cambio de pestaña
+    val query by homeViewModel.query.collectAsState()
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    //clearSearch limpia tambien el texto
+    BackHandler(enabled = searchState != HomeSearchState.Idle) {
+        homeViewModel.clearSearch()
+    }
+
     LaunchedEffect(isMainPlaying) {
         if (isMainPlaying) homeViewModel.stopPreview()
     }
@@ -175,8 +199,87 @@ fun HomeScreen(
             ThemeSwitch(isDarkTheme = isDarkTheme, onDarkThemeChange = onDarkThemeChange)
         }
 
+        TextField(
+            value = query,
+            onValueChange = { homeViewModel.onQueryChange(it) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp),
+            shape = RoundedCornerShape(12.dp),
+            placeholder = {
+                Text(
+                    text = "Artistas, álbumes o canciones...",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            trailingIcon = {
+                if (query.isNotEmpty() || searchState != HomeSearchState.Idle) {
+                    IconButton(onClick = { homeViewModel.clearSearch() }) {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = "Limpiar busqueda",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            },
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+            ),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = {
+                homeViewModel.search(query)
+                keyboardController?.hide()
+            }),
+            singleLine = true
+        )
 
+        //Con busqueda activa los resultados reemplazan las secciones del Home
+        if (searchState != HomeSearchState.Idle) {
+            Spacer(Modifier.height(16.dp))
 
+            HomeSearchResults(
+                state = searchState,
+                previewTrackId = previewTrackId,
+                isPreviewLoading = isPreviewLoading,
+                isDownloading = isDownloading,
+                downloadRowState = { trackId ->
+                    val rowKey = downloadViewModel.deezerRowKey(trackId)
+                    when {
+                        rowKey in completedDownloads -> DownloadRowState.Done
+                        rowKey != downloadingId -> DownloadRowState.Idle
+                        downloadProgress < 0 -> DownloadRowState.Starting
+                        else -> DownloadRowState.Running(downloadProgress)
+                    }
+                },
+                onPreview = { trackId ->
+                    if (isMainPlaying) onPauseMain()
+                    homeViewModel.togglePreview(trackId)
+                },
+                onDownload = { track ->
+                    downloadViewModel.downloadDeezerTrack(
+                        trackId = track.id,
+                        artist = track.artistName,
+                        title = track.title
+                    )
+                },
+                onArtistClick = onArtistClick,
+                onAlbumClick = onAlbumClick,
+                onRetry = { homeViewModel.search(query) }
+            )
+        } else {
 
         Spacer(Modifier.height(16.dp))
 
@@ -372,6 +475,7 @@ fun HomeScreen(
                 NewPlaylistCard(onClick = onCreatePlaylist)
             }
         }
+        } 
 
         Spacer(Modifier.height(16.dp))
     }
@@ -381,6 +485,129 @@ fun HomeScreen(
         modifier = Modifier.align(Alignment.BottomCenter)
     )
     } // Box
+}
+
+@Composable
+private fun HomeSearchResults(
+    state: HomeSearchState,
+    previewTrackId: Long?,
+    isPreviewLoading: Boolean,
+    isDownloading: Boolean,
+    downloadRowState: (Long) -> DownloadRowState,
+    onPreview: (Long) -> Unit,
+    onDownload: (Track) -> Unit,
+    onArtistClick: (Long) -> Unit,
+    onAlbumClick: (Long) -> Unit,
+    onRetry: () -> Unit
+) {
+    when (state) {
+        HomeSearchState.Idle -> Unit
+
+        HomeSearchState.Loading -> {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(CAROUSEL_HEIGHT),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+            }
+        }
+
+        is HomeSearchState.Error -> {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = state.message,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(8.dp))
+                TextButton(onClick = onRetry) {
+                    Text("Reintentar", color = MaterialTheme.colorScheme.secondary)
+                }
+            }
+        }
+
+        is HomeSearchState.Ready -> {
+            val results = state.results
+
+            if (results.isEmpty) {
+                Text(
+                    text = "Sin resultados para \"${state.query}\".",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp)
+                )
+                return
+            }
+
+            if (results.artists.isNotEmpty()) {
+                SectionTitle("Artistas")
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 22.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    items(results.artists, key = { it.id }) { artist ->
+                        //La misma tarjeta circular de "Artistas similares"
+                        RelatedArtistCard(
+                            artist = artist,
+                            onClick = { onArtistClick(artist.id) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
+            if (results.albums.isNotEmpty()) {
+                SectionTitle("Álbumes")
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 22.dp),
+                    horizontalArrangement = Arrangement.spacedBy(CARD_GAP)
+                ) {
+                    items(results.albums, key = { it.id }) { album ->
+                        CarouselCard(
+                            coverUrl = album.coverXl,
+                            title = album.title,
+                            subtitle = album.artistName,
+                            onClick = { onAlbumClick(album.id) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
+            if (results.tracks.isNotEmpty()) {
+                SectionTitle("Canciones")
+                //Column y no LazyColumn: el Home ya es un Column con scroll
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    results.tracks.forEach { track ->
+                        AlbumTrackRow(
+                            track = track,
+                            //Aqui las canciones son de artistas distintos
+                            showArtist = true,
+                            isPreviewing = previewTrackId == track.id,
+                            isPreviewLoading = previewTrackId == track.id && isPreviewLoading,
+                            onPreview = track.previewUrl?.let { { onPreview(track.id) } },
+                            downloadState = downloadRowState(track.id),
+                            downloadEnabled = !isDownloading,
+                            onDownload = { onDownload(track) },
+                            //12 + los 10 internos de la fila = los 22 del Home
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                            coverUrl = track.coverMedium
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 //Tarjeta para crear una playlist desde el Home. Mantiene el tamaño y la forma de

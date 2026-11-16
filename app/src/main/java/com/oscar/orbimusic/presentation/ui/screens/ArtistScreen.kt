@@ -405,7 +405,7 @@ private fun ArtistDetailHeader(artist: ArtistDetail, onBack: () -> Unit) {
 //Foto circular con el nombre y los fans debajo, centrados. Ancho fijo para
 //que los nombres largos se corten en vez de ensanchar la tarjeta.
 @Composable
-private fun RelatedArtistCard(artist: Artist, onClick: () -> Unit) {
+internal fun RelatedArtistCard(artist: Artist, onClick: () -> Unit) {
     Column(
         Modifier
             .width(RELATED_PHOTO_SIZE)
