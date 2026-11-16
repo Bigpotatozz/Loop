@@ -143,6 +143,19 @@ class DeezerRepositoryImpl(
                     }
                 }
 
+                val related = async {
+                    try {
+                        deezerClient.getRelatedArtists(id).data.orEmpty()
+                            .mapNotNull { it.toDomainModel() }
+                            .distinctBy { it.id } // ids repetidos tronarian las keys del LazyRow
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w("DeezerRepository", "Sin similares para el artista $id", e)
+                        emptyList()
+                    }
+                }
+
                 //Si falla el top la pantalla se muestra igual con la lista
                 //vacia; solo el detalle es indispensable
                 val top = async {
@@ -161,7 +174,7 @@ class DeezerRepositoryImpl(
                     .mapIndexedNotNull { index, track -> track.toDomainModel(positionOverride = index + 1) }
                     .distinctBy { it.id } // ids repetidos tronarian las keys del LazyColumn
 
-                detail.await().toArtistDetail(tracks, albums.await())
+                detail.await().toArtistDetail(tracks, albums.await(), related.await())
             }
 
             //Null = Deezer contesto 200 con {"error":...}, igual que album/{id}
@@ -221,7 +234,11 @@ private fun TrackDto.toDomainModel(positionOverride: Int? = null): Track? {
 
 
 //Mismas guardas que toDomainModel: sin id, nombre o foto no hay pantalla
-private fun ArtistDto.toArtistDetail(topTracks: List<Track>, albumDtos: List<AlbumDto>): ArtistDetail? {
+private fun ArtistDto.toArtistDetail(
+    topTracks: List<Track>,
+    albumDtos: List<AlbumDto>,
+    related: List<Artist>
+): ArtistDetail? {
     val safeId = id ?: return null
     val safeName = name?.takeIf { it.isNotBlank() } ?: return null
     val xl = pictureXl ?: pictureBig ?: pictureMedium ?: return null
@@ -233,7 +250,9 @@ private fun ArtistDto.toArtistDetail(topTracks: List<Track>, albumDtos: List<Alb
         fanCount = nbFan,
         albumCount = nbAlbum,
         topTracks = topTracks,
-        albums = albumDtos.toLatestAlbums(safeName)
+        albums = albumDtos.toLatestAlbums(safeName),
+        //Por si Deezer incluyera al propio artista entre sus similares
+        related = related.filter { it.id != safeId }
     )
 }
 

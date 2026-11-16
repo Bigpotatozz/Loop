@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -54,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.media3.common.util.UnstableApi
 import coil.compose.AsyncImage
 import com.oscar.orbimusic.domain.models.Album
+import com.oscar.orbimusic.domain.models.Artist
 import com.oscar.orbimusic.domain.models.ArtistDetail
 import com.oscar.orbimusic.presentation.models.ArtistState
 import com.oscar.orbimusic.presentation.ui.components.DownloadRowState
@@ -62,6 +64,9 @@ import com.oscar.orbimusic.presentation.viewmodel.ArtistScreenViewModel
 import com.oscar.orbimusic.presentation.viewmodel.DownloadViewModel
 
 private const val COLLAPSED_COUNT = 5
+
+//Foto de los artistas similares
+private val RELATED_PHOTO_SIZE = 110.dp
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -72,6 +77,7 @@ fun ArtistScreen(
     isMainPlaying: Boolean,
     onPauseMain: () -> Unit,
     onAlbumClick: (Long) -> Unit,
+    onArtistClick: (Long) -> Unit,
     onBack: () -> Unit
 ) {
     LaunchedEffect(artistId) { artistViewModel.load(artistId) }
@@ -297,6 +303,34 @@ fun ArtistScreen(
                             }
                         }
                     }
+
+                    if (artist.related.isNotEmpty()) {
+                        item(key = "related-title") {
+                            Text(
+                                text = "Artistas similares",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 15.sp
+                                ),
+                                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 20.dp, bottom = 8.dp)
+                            )
+                        }
+
+                        item(key = "related-carousel") {
+                            LazyRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                items(artist.related, key = { it.id }) { related ->
+                                    RelatedArtistCard(
+                                        artist = related,
+                                        onClick = { onArtistClick(related.id) }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -364,6 +398,54 @@ private fun ArtistDetailHeader(artist: ArtistDetail, onBack: () -> Unit) {
         }
 
         Spacer(Modifier.height(16.dp))
+    }
+}
+
+
+//Foto circular con el nombre y los fans debajo, centrados. Ancho fijo para
+//que los nombres largos se corten en vez de ensanchar la tarjeta.
+@Composable
+private fun RelatedArtistCard(artist: Artist, onClick: () -> Unit) {
+    Column(
+        Modifier
+            .width(RELATED_PHOTO_SIZE)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AsyncImage(
+            model = artist.pictureMedium,
+            contentDescription = artist.name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(RELATED_PHOTO_SIZE)
+                .clip(CircleShape)
+                //Placeholder mientras carga, para que no se vea un hueco
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = artist.name,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold
+            ),
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        artist.fanCount?.takeIf { it > 0 }?.let { fans ->
+            Text(
+                text = formatFans(fans),
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+        }
     }
 }
 

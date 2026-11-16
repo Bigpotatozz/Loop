@@ -7,5 +7,6 @@ class ArtistDetail(
     val fanCount: Int? = null,
     val albumCount: Int? = null,
     val topTracks: List<Track>,
-    val albums: List<Album> = emptyList()
+    val albums: List<Album> = emptyList(),
+    val related: List<Artist> = emptyList()
 )

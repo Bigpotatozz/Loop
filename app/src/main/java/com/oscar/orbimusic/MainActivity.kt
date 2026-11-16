@@ -298,6 +298,8 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaVi
                 isMainPlaying = mainPlayerState.isPlaying,
                 onPauseMain = { mediaViewModel.pauseSong() },
                 onAlbumClick = { id -> hostController.navigate("album/$id") },
+                //Abre otro ArtistScreen encima: atras regresa al artista anterior
+                onArtistClick = { id -> hostController.navigate("artist/$id") },
                 onBack = { hostController.popBackStack() }
             )
         }

@@ -53,6 +53,14 @@ interface DeezerClient {
         @Query("limit") limit: Int = 50
     ): DeezerListDto<AlbumDto>
 
+    //Artistas similares. A diferencia del chart ya traen nb_fan y nb_album,
+    //asi que no hace falta la segunda pasada por artist/{id}
+    @GET("artist/{id}/related")
+    suspend fun getRelatedArtists(
+        @Path("id") id: Long,
+        @Query("limit") limit: Int = 10
+    ): DeezerListDto<ArtistDto>
+
     //El album completo con sus canciones en "tracks". Ojo: si el id no existe
     //Deezer responde 200 con {"error":{...}}, asi que llega un AlbumDto vacio.
     @GET("album/{id}")
