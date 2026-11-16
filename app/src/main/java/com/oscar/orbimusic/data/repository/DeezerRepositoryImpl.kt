@@ -128,8 +128,20 @@ class DeezerRepositoryImpl(
     override suspend fun getArtist(id: Long, topLimit: Int): Result<ArtistDetail> {
         return try {
             val artist = coroutineScope {
-                //Las dos peticiones son independientes: van en paralelo
+                //Las tres peticiones son independientes: van en paralelo
                 val detail = async { deezerClient.getArtist(id) }
+
+                //Igual que el top: si falla, el carrusel simplemente no sale
+                val albums = async {
+                    try {
+                        deezerClient.getArtistAlbums(id).data.orEmpty()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w("DeezerRepository", "Sin albumes para el artista $id", e)
+                        emptyList()
+                    }
+                }
 
                 //Si falla el top la pantalla se muestra igual con la lista
                 //vacia; solo el detalle es indispensable
@@ -149,7 +161,7 @@ class DeezerRepositoryImpl(
                     .mapIndexedNotNull { index, track -> track.toDomainModel(positionOverride = index + 1) }
                     .distinctBy { it.id } // ids repetidos tronarian las keys del LazyColumn
 
-                detail.await().toArtistDetail(tracks)
+                detail.await().toArtistDetail(tracks, albums.await())
             }
 
             //Null = Deezer contesto 200 con {"error":...}, igual que album/{id}
@@ -209,7 +221,7 @@ private fun TrackDto.toDomainModel(positionOverride: Int? = null): Track? {
 
 
 //Mismas guardas que toDomainModel: sin id, nombre o foto no hay pantalla
-private fun ArtistDto.toArtistDetail(topTracks: List<Track>): ArtistDetail? {
+private fun ArtistDto.toArtistDetail(topTracks: List<Track>, albumDtos: List<AlbumDto>): ArtistDetail? {
     val safeId = id ?: return null
     val safeName = name?.takeIf { it.isNotBlank() } ?: return null
     val xl = pictureXl ?: pictureBig ?: pictureMedium ?: return null
@@ -220,7 +232,41 @@ private fun ArtistDto.toArtistDetail(topTracks: List<Track>): ArtistDetail? {
         pictureXl = xl,
         fanCount = nbFan,
         albumCount = nbAlbum,
-        topTracks = topTracks
+        topTracks = topTracks,
+        albums = albumDtos.toLatestAlbums(safeName)
+    )
+}
+
+
+//Cuantos entran en el carrusel de la pantalla de artista
+private const val ARTIST_ALBUMS_LIMIT = 10
+
+//Solo albumes y EPs: los sencillos y recopilaciones enterrarian los albumes
+//de artistas que sacan muchos sencillos
+private val ARTIST_ALBUM_TYPES = setOf("album", "ep")
+
+private fun List<AlbumDto>.toLatestAlbums(artistName: String): List<Album> =
+    filter { it.recordType in ARTIST_ALBUM_TYPES }
+        .mapNotNull { it.toArtistAlbum(artistName) }
+        .distinctBy { it.id } // ids repetidos tronarian las keys del LazyRow
+        .sortedByDescending { it.releaseDate.orEmpty() }
+        .take(ARTIST_ALBUMS_LIMIT)
+
+
+private fun AlbumDto.toArtistAlbum(artistName: String): Album? {
+    val safeId = id ?: return null
+    val safeTitle = title?.takeIf { it.isNotBlank() } ?: return null
+    val medium = coverMedium ?: coverXl ?: return null
+    val xl = coverXl ?: coverMedium ?: return null
+
+    return Album(
+        id = safeId,
+        title = safeTitle,
+        artistName = artist?.name?.takeIf { it.isNotBlank() } ?: artistName,
+        coverMedium = medium,
+        coverXl = xl,
+        releaseDate = releaseDate,
+        recordType = recordType
     )
 }
 

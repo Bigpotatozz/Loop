@@ -297,6 +297,7 @@ fun AppNavigation(modifier: Modifier, hostController: NavHostController, mediaVi
                 downloadViewModel = downloadViewModel,
                 isMainPlaying = mainPlayerState.isPlaying,
                 onPauseMain = { mediaViewModel.pauseSong() },
+                onAlbumClick = { id -> hostController.navigate("album/$id") },
                 onBack = { hostController.popBackStack() }
             )
         }

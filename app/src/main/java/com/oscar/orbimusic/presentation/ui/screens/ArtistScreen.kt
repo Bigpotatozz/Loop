@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -52,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.util.UnstableApi
 import coil.compose.AsyncImage
+import com.oscar.orbimusic.domain.models.Album
 import com.oscar.orbimusic.domain.models.ArtistDetail
 import com.oscar.orbimusic.presentation.models.ArtistState
 import com.oscar.orbimusic.presentation.ui.components.DownloadRowState
@@ -69,6 +71,7 @@ fun ArtistScreen(
     downloadViewModel: DownloadViewModel,
     isMainPlaying: Boolean,
     onPauseMain: () -> Unit,
+    onAlbumClick: (Long) -> Unit,
     onBack: () -> Unit
 ) {
     LaunchedEffect(artistId) { artistViewModel.load(artistId) }
@@ -263,6 +266,37 @@ fun ArtistScreen(
                             }
                         }
                     }
+
+                    //Sin albumes (o si /albums fallo) la seccion no sale
+                    if (artist.albums.isNotEmpty()) {
+                        item(key = "albums-title") {
+                            Text(
+                                text = "Álbumes",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 15.sp
+                                ),
+                                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 20.dp, bottom = 8.dp)
+                            )
+                        }
+
+                        item(key = "albums-carousel") {
+                            LazyRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(CARD_GAP)
+                            ) {
+                                items(artist.albums, key = { it.id }) { album ->
+                                    CarouselCard(
+                                        coverUrl = album.coverXl,
+                                        title = album.title,
+                                        subtitle = albumCardSubtitle(album),
+                                        onClick = { onAlbumClick(album.id) }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -331,6 +365,18 @@ private fun ArtistDetailHeader(artist: ArtistDetail, onBack: () -> Unit) {
 
         Spacer(Modifier.height(16.dp))
     }
+}
+
+
+//"2024 · Álbum" o "2023 · EP". Lo que no venga se omite.
+private fun albumCardSubtitle(album: Album): String {
+    val parts = mutableListOf<String>()
+    album.releaseDate?.take(4)?.takeIf { it.length == 4 }?.let { parts.add(it) }
+    when (album.recordType) {
+        "album" -> parts.add("Álbum")
+        "ep" -> parts.add("EP")
+    }
+    return parts.joinToString(" · ")
 }
 
 

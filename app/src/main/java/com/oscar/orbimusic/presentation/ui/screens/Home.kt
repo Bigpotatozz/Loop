@@ -83,8 +83,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private val CARD_SIZE = 140.dp
-private val CARD_GAP = 10
-    .dp
+internal val CARD_GAP = 10.dp
 private val CAROUSEL_HEIGHT = 210.dp
 
 //Tarjeta de artista: rectangulo horizontal. Alta como una tarjeta de album
@@ -573,7 +572,8 @@ private fun ArtistCard(name: String, pictureUrl: String, fanCount: Int?, onClick
 //Caratula grande con el titulo y un subtitulo debajo.
 @Composable
 //onClick null = tarjeta sin accion (las canciones, por ahora)
-private fun CarouselCard(
+//internal: ArtistScreen la usa para el carrusel de albumes
+internal fun CarouselCard(
     coverUrl: String = "",
     title: String,
     subtitle: String,
