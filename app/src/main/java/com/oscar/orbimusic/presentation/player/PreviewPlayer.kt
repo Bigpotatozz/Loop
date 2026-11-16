@@ -2,6 +2,8 @@ package com.oscar.orbimusic.presentation.player
 
 import android.content.Context
 import android.util.Log
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -38,8 +40,29 @@ class PreviewPlayer(
 
     //Lazy para no crearlo si el usuario nunca toca una cancion
     private val player: ExoPlayer by lazy {
-        ExoPlayer.Builder(context).build().apply {
+        ExoPlayer.Builder(context)
+            //Pide el foco igual que el reproductor principal: al sonar el
+            //preview se pausan otras apps y la cola propia de OrbiMusic
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                    .build(),
+                true
+            )
+            .build().apply {
             addListener(object : Player.Listener {
+                //Si otra app (o el reproductor principal) quita el foco, ExoPlayer
+                //se pausa pero previewTrackId seguiria marcando la tarjeta como
+                //"sonando". Un preview de 30s no vale dejarlo en pausa: se detiene.
+                override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                    if (!playWhenReady &&
+                        reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS
+                    ) {
+                        stop()
+                    }
+                }
+
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     when (playbackState) {
                         Player.STATE_BUFFERING -> _isPreviewLoading.value = true

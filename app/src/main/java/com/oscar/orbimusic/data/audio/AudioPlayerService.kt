@@ -1,9 +1,16 @@
 package com.oscar.orbimusic.data.audio
 
 import android.content.Intent
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+
+private val musicAudioAttributes: AudioAttributes = AudioAttributes.Builder()
+    .setUsage(C.USAGE_MEDIA)
+    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+    .build()
 
 class AudioPlayerService : MediaSessionService() {
 
@@ -12,7 +19,13 @@ class AudioPlayerService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        player = ExoPlayer.Builder(this).build()
+        player = ExoPlayer.Builder(this)
+            //handleAudioFocus = true: pide el foco al sonar (pausa a otras apps)
+            //y se pausa solo cuando otra app lo pide. Sin esto se enciman.
+            .setAudioAttributes(musicAudioAttributes, true)
+            //Pausa al desconectar audifonos en vez de seguir por la bocina
+            .setHandleAudioBecomingNoisy(true)
+            .build()
         mediaSession = MediaSession.Builder(this, player).build()
     }
 
