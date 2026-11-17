@@ -1,6 +1,8 @@
 package com.oscar.orbimusic.data.audio
 
+import android.app.PendingIntent
 import android.content.Intent
+import com.oscar.orbimusic.MainActivity
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.exoplayer.ExoPlayer
@@ -26,7 +28,19 @@ class AudioPlayerService : MediaSessionService() {
             //Pausa al desconectar audifonos en vez de seguir por la bocina
             .setHandleAudioBecomingNoisy(true)
             .build()
-        mediaSession = MediaSession.Builder(this, player).build()
+        mediaSession = MediaSession.Builder(this, player)
+            .setSessionActivity(sessionActivityIntent())
+            .build()
+    }
+
+    //Lo que abre tocar la notificacion.
+    private fun sessionActivityIntent(): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        return PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
     }
 
     //Por aqui entra el MediaController del ViewModel. Sustituye a onBind/Binder.

@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -200,19 +201,45 @@ class MediaViewModel (private val songRepository: SongRepository,
         )
         controllerFuture = MediaController.Builder(context, token).buildAsync().also { future ->
             future.addListener({
-                controller = future.get()
-                controller?.addListener(playerListener)
-                //Si el usuario ya habia tocado shuffle/repeat antes de que el
-                //controller existiera, el player no se habria enterado
-                controller?.shuffleModeEnabled = _shuffle.value
-                controller?.repeatMode = when {
-                    _repeat.value  -> Player.REPEAT_MODE_ONE
-                    _shuffle.value -> Player.REPEAT_MODE_ALL
-                    else           -> Player.REPEAT_MODE_OFF
+                val player = future.get()
+                controller = player
+                player.addListener(playerListener)
+
+                if (player.mediaItemCount > 0) {
+                    restoreFromPlayer(player)
+                } else {
+                    player.shuffleModeEnabled = _shuffle.value
+                    player.repeatMode = when {
+                        _repeat.value  -> Player.REPEAT_MODE_ONE
+                        _shuffle.value -> Player.REPEAT_MODE_ALL
+                        else           -> Player.REPEAT_MODE_OFF
+                    }
                 }
             }, MoreExecutors.directExecutor())
         }
     }
+
+    private fun restoreFromPlayer(player: MediaController) {
+        _shuffle.value = player.shuffleModeEnabled
+        _repeat.value = player.repeatMode == Player.REPEAT_MODE_ONE
+
+        val ids = (0 until player.mediaItemCount).map {
+            player.getMediaItemAt(it).mediaId.toLongOrNull()
+        }
+
+        viewModelScope.launch {
+            val byId = songRepository.getAllSongs().first().associateBy { it.id }
+            val queue = ids.map { id -> id?.let(byId::get) }
+            if (queue.any { it == null }) {
+                Log.w("MediaViewModel", "No se pudo reconstruir la cola desde el player")
+                return@launch
+            }
+
+            _playerState.update { it.copy(queue = queue.filterNotNull()) }
+            syncPlayerState()
+        }
+    }
+
     public fun loadAllSongs(){
         viewModelScope.launch {
             try{

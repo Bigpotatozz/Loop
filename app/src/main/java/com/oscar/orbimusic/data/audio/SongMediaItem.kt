@@ -7,6 +7,7 @@ import com.oscar.orbimusic.domain.models.Song
 import java.io.File
 
 fun Song.toMediaItem(): MediaItem = MediaItem.Builder()
+    .setMediaId(id.toString())
     .setUri(path)
     .setMediaMetadata(
         MediaMetadata.Builder()
