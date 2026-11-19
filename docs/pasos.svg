@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 210" width="1280" height="210">
+  <style>
+    text { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .flow { animation: flow 1.2s linear infinite; }
+    @keyframes flow { to { stroke-dashoffset: -24; } }
+  </style>
+  <rect width="1280" height="210" rx="24" fill="#121212"/>
+
+  <line class="flow" x1="200" y1="78" x2="1080" y2="78" stroke="#5A5A60" stroke-width="3" stroke-dasharray="4 8" stroke-linecap="round"/>
+
+  <g text-anchor="middle">
+    <g transform="translate(200 78)">
+      <circle r="30" fill="#1C1C1E" stroke="#2E2E30" stroke-width="2"/>
+      <text y="8" font-size="22" font-weight="700" fill="#FFFFFF">1</text>
+      <text y="68" font-size="18" font-weight="600" fill="#FFFFFF">Descarga el .apk</text>
+      <text y="94" font-size="15" fill="#9A9AA0">de la última versión</text>
+    </g>
+    <g transform="translate(493 78)">
+      <circle r="30" fill="#1C1C1E" stroke="#2E2E30" stroke-width="2"/>
+      <text y="8" font-size="22" font-weight="700" fill="#FFFFFF">2</text>
+      <text y="68" font-size="18" font-weight="600" fill="#FFFFFF">Ábrelo</text>
+      <text y="94" font-size="15" fill="#9A9AA0">desde tu teléfono</text>
+    </g>
+    <g transform="translate(786 78)">
+      <circle r="30" fill="#1C1C1E" stroke="#2E2E30" stroke-width="2"/>
+      <text y="8" font-size="22" font-weight="700" fill="#FFFFFF">3</text>
+      <text y="68" font-size="18" font-weight="600" fill="#FFFFFF">Permite la instalación</text>
+      <text y="94" font-size="15" fill="#9A9AA0">de fuentes desconocidas</text>
+    </g>
+    <g transform="translate(1080 78)">
+      <circle r="30" fill="#E5484D"/>
+      <path d="M-10 -12 v24 l20 -12z" fill="#FFFFFF"/>
+      <text y="68" font-size="18" font-weight="600" fill="#FFFFFF">Dale play</text>
+      <text y="94" font-size="15" fill="#9A9AA0">y elige tu primera canción</text>
+    </g>
+  </g>
+</svg>

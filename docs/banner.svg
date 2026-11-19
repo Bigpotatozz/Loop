@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1280 420" width="1280" height="420">
+  <style>
+    text { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .bar { transform-box: fill-box; transform-origin: 50% 100%; animation: eq 1.1s ease-in-out infinite alternate; }
+    .b1{animation-delay:-.1s}.b2{animation-delay:-.5s}.b3{animation-delay:-.9s}.b4{animation-delay:-.3s}
+    .b5{animation-delay:-.7s}.b6{animation-delay:-.2s}.b7{animation-delay:-.8s}.b8{animation-delay:-.4s}
+    .b9{animation-delay:-.6s}.b10{animation-delay:-1s}.b11{animation-delay:-.35s}.b12{animation-delay:-.75s}
+    @keyframes eq { 0%{transform:scaleY(.25)} 50%{transform:scaleY(.9)} 100%{transform:scaleY(.45)} }
+    .knob { animation: pulse 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.25)} }
+  </style>
+  <defs>
+    <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.2" fill="#FFFFFF" fill-opacity=".05"/>
+    </pattern>
+    <radialGradient id="glow" cx="78%" cy="40%" r="55%">
+      <stop offset="0" stop-color="#E5484D" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#E5484D" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="frame"><rect width="1280" height="420" rx="28"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#frame)">
+    <rect width="1280" height="420" fill="#121212"/>
+    <rect width="1280" height="420" fill="url(#dots)"/>
+    <rect width="1280" height="420" fill="url(#glow)"/>
+
+    <!-- icono -->
+    <image x="88" y="78" width="132" height="132" href="data:image/webp;base64,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"/>
+
+    <!-- textos -->
+    <text x="252" y="128" font-size="15" letter-spacing="4" fill="#9A9AA0" font-weight="600">REPRODUCTOR DE MÚSICA · ANDROID</text>
+    <text x="250" y="178" font-size="46" font-weight="700" fill="#FFFFFF" letter-spacing="-1.2">Lo que tienes, lo que suena</text>
+    <text x="250" y="230" font-size="46" font-weight="700" fill="#5A5A60" letter-spacing="-1.2">y lo que viene.</text>
+
+    <!-- ecualizador -->
+    <g fill="#FFFFFF">
+      <rect class="bar b1"  x="930"  y="110" width="14" height="140" rx="7"/>
+      <rect class="bar b2"  x="954"  y="90"  width="14" height="160" rx="7"/>
+      <rect class="bar b3"  x="978"  y="130" width="14" height="120" rx="7"/>
+      <rect class="bar b4"  x="1002" y="70"  width="14" height="180" rx="7"/>
+      <rect class="bar b5"  x="1026" y="100" width="14" height="150" rx="7"/>
+      <rect class="bar b6"  x="1050" y="60"  width="14" height="190" rx="7" fill="#E5484D"/>
+      <rect class="bar b7"  x="1074" y="95"  width="14" height="155" rx="7"/>
+      <rect class="bar b8"  x="1098" y="120" width="14" height="130" rx="7"/>
+      <rect class="bar b9"  x="1122" y="80"  width="14" height="170" rx="7"/>
+      <rect class="bar b10" x="1146" y="115" width="14" height="135" rx="7"/>
+      <rect class="bar b11" x="1170" y="140" width="14" height="110" rx="7"/>
+      <rect class="bar b12" x="1194" y="125" width="14" height="125" rx="7"/>
+    </g>
+
+    <!-- barra de reproducción -->
+    <line x1="88" y1="318" x2="1192" y2="318" stroke="#2E2E30" stroke-width="6" stroke-linecap="round"/>
+    <line x1="88" y1="318" x2="520" y2="318" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
+    <circle class="knob" cx="520" cy="318" r="10" fill="#FFFFFF"/>
+    <text x="88" y="356" font-size="15" fill="#9A9AA0">1:24</text>
+    <text x="1192" y="356" font-size="15" fill="#9A9AA0" text-anchor="end">3:45</text>
+
+    <!-- controles -->
+    <g transform="translate(640 356)" fill="#FFFFFF">
+      <path d="M-78 -12 l-14 12 l14 12 z M-96 -12 h4 v24 h-4 z" fill="#9A9AA0"/>
+      <circle cx="0" cy="0" r="20"/>
+      <path d="M-6 -9 v18 l14 -9 z" fill="#121212"/>
+      <path d="M78 -12 l14 12 l-14 12 z M92 -12 h4 v24 h-4 z" fill="#9A9AA0"/>
+    </g>
+  </g>
+</svg>
