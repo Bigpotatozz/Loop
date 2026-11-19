@@ -55,7 +55,7 @@ import com.oscar.orbimusic.presentation.ui.screens.ArtistScreen
 import com.oscar.orbimusic.presentation.viewmodel.ArtistScreenViewModel
 import com.oscar.orbimusic.presentation.ui.screens.HomeScreen
 import com.oscar.orbimusic.presentation.ui.screens.MediaScreen
-import com.oscar.orbimusic.presentation.ui.theme.OrbiMusicTheme
+import com.oscar.orbimusic.presentation.ui.theme.LoopTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Icon
@@ -147,7 +147,7 @@ class MainActivity : ComponentActivity() {
                 controller.isAppearanceLightNavigationBars = !darkTheme
             }
 
-            OrbiMusicTheme(darkTheme = darkTheme) {
+            LoopTheme(darkTheme = darkTheme) {
 
 
                 //Es una caja que me da herramientas para animacion y las ejecuta

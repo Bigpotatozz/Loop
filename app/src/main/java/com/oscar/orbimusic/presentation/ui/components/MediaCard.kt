@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.oscar.orbimusic.presentation.ui.theme.FavoriteRed
-import com.oscar.orbimusic.presentation.ui.theme.OrbiMusicTheme
+import com.oscar.orbimusic.presentation.ui.theme.LoopTheme
 import com.oscar.orbimusic.presentation.utils.parseTime
 
 @Composable
@@ -209,7 +209,7 @@ fun MediaSongCard(
 @Preview(name = "Oscuro", showBackground = true, showSystemUi = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun MediaSongCardPreview() {
-    OrbiMusicTheme {
+    LoopTheme {
         Column(
             Modifier
                 .fillMaxWidth()

@@ -38,7 +38,7 @@ import com.oscar.orbimusic.presentation.ui.animations.PlayerTitleKey
 import com.oscar.orbimusic.presentation.ui.animations.sharedPlayerBounds
 import com.oscar.orbimusic.presentation.ui.animations.sharedPlayerElement
 import com.oscar.orbimusic.presentation.ui.icons.PlayerIcons
-import com.oscar.orbimusic.presentation.ui.theme.OrbiMusicTheme
+import com.oscar.orbimusic.presentation.ui.theme.LoopTheme
 import com.oscar.orbimusic.presentation.viewmodel.MediaViewModel
 
 
@@ -190,7 +190,7 @@ private fun MiniPlayerContent(
 @Preview(name = "Oscuro", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun MiniPlayerContentPreview(){
-    OrbiMusicTheme {
+    LoopTheme {
         Column(
             Modifier
                 .fillMaxWidth()

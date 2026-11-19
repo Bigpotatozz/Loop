@@ -42,7 +42,7 @@ class PreviewPlayer(
     private val player: ExoPlayer by lazy {
         ExoPlayer.Builder(context)
             //Pide el foco igual que el reproductor principal: al sonar el
-            //preview se pausan otras apps y la cola propia de OrbiMusic
+            //preview se pausan otras apps y la cola propia de Loop
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)

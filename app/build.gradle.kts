@@ -17,7 +17,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.oscar.orbimusic"
+        applicationId = "com.oscar.loop"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

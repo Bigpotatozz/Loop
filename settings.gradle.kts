@@ -23,5 +23,5 @@ dependencyResolutionManagement {
         maven { url = uri("https://jitpack.io") } // Esto es vital
     }
 }
-rootProject.name = "OrbiMusic"
+rootProject.name = "Loop"
 include(":app")

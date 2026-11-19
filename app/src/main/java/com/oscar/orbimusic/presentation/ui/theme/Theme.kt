@@ -42,7 +42,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun OrbiMusicTheme(
+fun LoopTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Desactivamos dynamicColor por defecto para que se vean tus colores personalizados
     dynamicColor: Boolean = false,

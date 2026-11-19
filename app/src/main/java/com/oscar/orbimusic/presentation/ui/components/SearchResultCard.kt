@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.oscar.orbimusic.data.models.YtSearchResult
-import com.oscar.orbimusic.presentation.ui.theme.OrbiMusicTheme
+import com.oscar.orbimusic.presentation.ui.theme.LoopTheme
 
 //En que punto de la descarga esta esta fila
 sealed interface DownloadRowState {
@@ -181,7 +181,7 @@ fun DownloadStateButton(
 @Preview(name = "Oscuro", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun SearchResultCardPreview() {
-    OrbiMusicTheme {
+    LoopTheme {
         Column(
             Modifier
                 .fillMaxWidth()
