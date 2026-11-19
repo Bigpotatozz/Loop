@@ -14,3 +14,9 @@
 .cxx
 local.properties
 .kotlin
+/app/release/
+
+# Firma de release: nunca subir al repo
+keystore.properties
+*.jks
+*.keystore
